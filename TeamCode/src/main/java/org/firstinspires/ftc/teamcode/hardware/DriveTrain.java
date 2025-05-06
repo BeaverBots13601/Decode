@@ -20,6 +20,9 @@ import java.util.List;
  * Responsible for managing our four-wheel Mecanum drive. Includes 3 levels of variable speed.
  */
 public class DriveTrain extends HardwareMechanism {
+    @Nullable
+    private static DriveTrain instance = null;
+
     private DriveMode orientationMode;
     private DcMotorEx[] driveMotors = new DcMotorEx[driveMotorName.values().length];
     @Nullable
@@ -27,7 +30,7 @@ public class DriveTrain extends HardwareMechanism {
     private double referenceAngle;
     private boolean dashboardEnabled;
     private SPEEDS currentSpeedMode = SPEEDS.NORMAL;
-    public DriveTrain(HardwareMap hardwareMap, InitData data, Telemetry telemetry){
+    private DriveTrain(HardwareMap hardwareMap, InitData data, Telemetry telemetry){
         super(hardwareMap, data, telemetry);
         try {
             createDriveMotors(hardwareMap);
@@ -46,6 +49,16 @@ public class DriveTrain extends HardwareMechanism {
         referenceAngle = Globals.robotHeading; // saved from auto, or 0 by default.
 
         available = true;
+    }
+
+    public static @Nullable DriveTrain getInstance(){
+        return instance;
+    }
+
+    public static @Nullable DriveTrain getInstance(HardwareMap hardwareMap, InitData data, Telemetry telemetry){
+        instance = new DriveTrain(hardwareMap, data, telemetry);
+        if (!instance.available) instance = null;
+        return instance;
     }
 
     public void start() {

@@ -50,13 +50,15 @@ public abstract class UnifiedTeleOp extends LinearOpMode {
         data.dashboardEnabled = FtcDashboard.getInstance().isEnabled();
 
         // Get a list of all HardwareMechanism classes
-        List<Class<HardwareMechanism>> classes = HardwareMechanismClassManager.getMechanisms();
+        List<Class<? extends HardwareMechanism>> classes = HardwareMechanismClassManager.getMechanisms();
         HashSet<GamepadButtons> buttons = new HashSet<>();
-        for (Class<HardwareMechanism> clazz : classes){
+        for (Class<? extends HardwareMechanism> clazz : classes){
             try {
                 // Instantiate each
-                HardwareMechanism mech = clazz.getDeclaredConstructor(HardwareMap.class, HardwareMechanism.InitData.class, Telemetry.class).newInstance(hardwareMap, data, telemetry);
-                // we do this sanity checking before determining whether the class is valid to catch issues earlier in dev
+                HardwareMechanism mech = (HardwareMechanism) clazz.getMethod("getInstance", HardwareMap.class, HardwareMechanism.InitData.class, Telemetry.class).invoke(clazz, hardwareMap, data, telemetry);
+
+                if (mech == null) return;
+
                 for (GamepadButtons button : mech.getUsedButtons()){
                     if (!buttons.add(button) && !buttonDuplicationExceptions.contains(button)){
                         // button is already in array & isn't in the exception list
@@ -64,7 +66,7 @@ public abstract class UnifiedTeleOp extends LinearOpMode {
                     }
                 }
                 // If all is well, add the mechanism to our list
-                if (mech.available) mechanisms.add(mech);
+                mechanisms.add(mech);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

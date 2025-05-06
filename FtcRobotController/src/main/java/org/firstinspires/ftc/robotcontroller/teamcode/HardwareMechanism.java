@@ -15,6 +15,9 @@ import java.util.List;
  * A class representing one combined mechanism on the robot, consisting of all related hardware components and function which is called on initialization, start, and every loop. Implementations of this class should expose such functions as are needed for autonomous.
  * <p>
  * All discovered HardwareMechanisms are loaded automatically within the TeleOp. Within autonomous they must be manually instantiated.
+ * <p>
+ * Subclasses should implement a singleton design, with a static getInstance() function returning null if unavailable.
+ * Subclasses should also include a static getInstance(HardwareMap, InitData, Telemetry) function for initialization.
  */
 public abstract class HardwareMechanism {
     public boolean available;
