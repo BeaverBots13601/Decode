@@ -4,6 +4,7 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.sensor.WebcamPropIdentification.PropLocation;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
@@ -14,8 +15,6 @@ import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraRotation;
 import org.openftc.easyopencv.OpenCvPipeline;
-
-import java.util.function.BiConsumer;
 
 /**
  * Handles scanning for a colored Team Prop within three regions. The regions it is scanning are
@@ -45,8 +44,8 @@ public class WebcamPropIdentification extends SensorDevice<PropLocation> {
     private TeamColor teamColor;
     private Pipeline pipeline;
     private OpenCvCamera camera;
-    public WebcamPropIdentification(HardwareMap hardwareMap, SensorInitData initData, BiConsumer<String, Object> telemetryFunc){
-        super(hardwareMap, initData, telemetryFunc);
+    public WebcamPropIdentification(HardwareMap hardwareMap, SensorInitData initData, Telemetry telemetry){
+        super(hardwareMap, initData, telemetry);
         try {
             camera = setUpCamera(hardwareMap, cameraName, cameraWidthPx, cameraHeightPx, orientation);
         } catch (Exception e) {
@@ -69,6 +68,8 @@ public class WebcamPropIdentification extends SensorDevice<PropLocation> {
     public PropLocation poll() {
         return pipeline.propLocation;
     }
+
+    public void stop() {}
 
     private class Pipeline extends OpenCvPipeline {
         // Publicly-accessible output
@@ -132,7 +133,6 @@ public class WebcamPropIdentification extends SensorDevice<PropLocation> {
             double rightPercentage;
 
             if(teamColor == TeamColor.BLUE){
-                // todo figure out what exactly this func does - grey out everything outside scalar range?
                 Core.inRange(hsv, blueHSVLow, blueHSVHigh, grey);
                 box = grey.submat(LeftROI);
                 leftPercentage = Core.sumElems(box).val[0] / LeftROI.area() / 255;

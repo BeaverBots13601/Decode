@@ -9,26 +9,26 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons;
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanism;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Globals;
 import org.firstinspires.ftc.teamcode.misc.Pose;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.BiConsumer;
 
 /**
  * Responsible for managing our four-wheel Mecanum drive. Includes 3 levels of variable speed.
  */
 public class DriveTrain extends HardwareMechanism {
     private DriveMode orientationMode;
-    private DcMotorEx[] driveMotors;
+    private DcMotorEx[] driveMotors = new DcMotorEx[driveMotorName.values().length];
     @Nullable
     private DigitalChannel switch_ = null;
     private double referenceAngle;
     private boolean dashboardEnabled;
     private SPEEDS currentSpeedMode = SPEEDS.NORMAL;
-    public DriveTrain(HardwareMap hardwareMap, InitData data, BiConsumer<String, Object> telemetryFunc){
-        super(hardwareMap, data, telemetryFunc);
+    public DriveTrain(HardwareMap hardwareMap, InitData data, Telemetry telemetry){
+        super(hardwareMap, data, telemetry);
         try {
             createDriveMotors(hardwareMap);
             try {
@@ -44,8 +44,6 @@ public class DriveTrain extends HardwareMechanism {
         dashboardEnabled = data.dashboardEnabled;
 
         referenceAngle = Globals.robotHeading; // saved from auto, or 0 by default.
-
-        driveMotors = new DcMotorEx[driveMotorName.values().length];
 
         available = true;
     }
@@ -70,7 +68,7 @@ public class DriveTrain extends HardwareMechanism {
         float stickY = -data.currentGamepadOne.left_stick_y * tmp_deadzoneadjust;
         float stickRotation = data.currentGamepadOne.right_stick_x * tmp_deadzoneadjust;
 
-        telemetry.accept("Current Orientation Mode", orientationMode);
+        telemetry.addData("Current Orientation Mode", orientationMode);
         double directionRotation = 0;
         if (orientationMode == DriveMode.FIELD) {
             directionRotation = -Pose.normalizeAngle(data.imuAngleRad - referenceAngle);
@@ -80,8 +78,8 @@ public class DriveTrain extends HardwareMechanism {
         double rotatedStickX = rotatedPosition.getX();
         double rotatedStickY = rotatedPosition.getY();
         double orientation = data.imuAngleRad;
-        telemetry.accept("IMU DATA (rads)", orientation);
-        telemetry.accept("Reference Angle (rads)", Globals.robotHeading);
+        telemetry.addData("IMU DATA (rads)", orientation);
+        telemetry.addData("Reference Angle (rads)", Globals.robotHeading);
 
         double maxPower = Math.max(Math.abs(stickY) + Math.abs(stickX) + Math.abs(stickRotation), 1);
 
@@ -90,11 +88,11 @@ public class DriveTrain extends HardwareMechanism {
         double rightFrontPower = (rotatedStickY - rotatedStickX - stickRotation) / maxPower * speedNow;
         double rightBackPower = (rotatedStickY + rotatedStickX - stickRotation) / maxPower * speedNow;
 
-        telemetry.accept("LeftMotorPower", leftFrontPower);
-        telemetry.accept("LeftBackPower", leftBackPower);
-        telemetry.accept("RightFrontPower", rightFrontPower);
-        telemetry.accept("RightBackPower", rightBackPower);
-        telemetry.accept("Current Speed Mode", currentSpeedMode);
+        telemetry.addData("Left Front Power", leftFrontPower);
+        telemetry.addData("Left Back Power", leftBackPower);
+        telemetry.addData("Right Front Power", rightFrontPower);
+        telemetry.addData("Right Back Power", rightBackPower);
+        telemetry.addData("Current Speed Mode", currentSpeedMode);
 
         setDriveMotors(new double[]{leftFrontPower, leftBackPower, rightFrontPower, rightBackPower}, DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
@@ -112,6 +110,8 @@ public class DriveTrain extends HardwareMechanism {
             currentSpeedMode = SPEEDS.CUSTOM_FTC_DASHBOARD;
         }
     }
+
+    public void stop() {}
 
     public List<GamepadButtons> getUsedButtons() {
         return Arrays.asList(

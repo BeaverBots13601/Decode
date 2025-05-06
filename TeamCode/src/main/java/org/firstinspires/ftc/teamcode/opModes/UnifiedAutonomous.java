@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode.opModes;
 
 import androidx.annotation.Nullable;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
@@ -13,8 +15,8 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Globals;
-import org.firstinspires.ftc.teamcode.TelemetryManager;
 import org.firstinspires.ftc.teamcode.sensor.SensorDevice;
 import org.firstinspires.ftc.teamcode.roadrunner.MecanumDrive;
 import org.firstinspires.ftc.teamcode.sensor.Limelight;
@@ -48,8 +50,8 @@ public class UnifiedAutonomous extends LinearOpMode {
         Globals.robotHeading = 0;
         if(currentLocation == null) currentLocation = Locations.Unknown;
         // Example autonomous code that can be used. Don't be afraid to expand or remodel it as needed
-        TelemetryManager robot = new TelemetryManager(telemetry);
-        limelight = new Limelight(hardwareMap, new SensorDevice.SensorInitData(), robot::writeToTelemetry);
+        Telemetry telemetry = new MultipleTelemetry(this.telemetry, FtcDashboard.getInstance().getTelemetry());
+        limelight = new Limelight(hardwareMap, new SensorDevice.SensorInitData(), telemetry);
 
         if(currentLocation == Locations.Unknown) {
             // limelight apriltag
@@ -100,8 +102,8 @@ public class UnifiedAutonomous extends LinearOpMode {
         TrajectoryActionBuilder toChamberPath = roadrunnerDrive.actionBuilder(startPose)
                 .strafeTo(new Vector2d(-6, -30.5));
 
-        robot.writeToTelemetry("INIT STATUS", "READY");
-        robot.updateTelemetry();
+        telemetry.addData("INIT STATUS", "READY");
+        telemetry.update();
 
         waitForStart(); // setup done actually do things
 

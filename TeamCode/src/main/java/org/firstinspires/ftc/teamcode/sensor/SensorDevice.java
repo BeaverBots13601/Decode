@@ -3,12 +3,11 @@ package org.firstinspires.ftc.teamcode.sensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
-
-import java.util.function.BiConsumer;
 
 /**
  * A SensorDevice is a general class to handle sensors which are of interest to multiple classes. Unlike HardwareMechanisms, SensorDevices must be manually instantiated.
@@ -18,10 +17,10 @@ import java.util.function.BiConsumer;
  */
 public abstract class SensorDevice<T> {
     public boolean available;
-    protected BiConsumer<String, Object> telemetry;
+    protected Telemetry telemetry;
 
-    public SensorDevice(HardwareMap hardwareMap, SensorInitData initData, BiConsumer<String, Object> telemetryFunc){
-        telemetry = telemetryFunc;
+    public SensorDevice(HardwareMap hardwareMap, SensorInitData initData, Telemetry telemetry){
+        this.telemetry = telemetry;
     }
 
     /**
@@ -33,6 +32,8 @@ public abstract class SensorDevice<T> {
      * @return The principle output of the sensor. Other outputs may have access provided for through other getters.
      */
     abstract public T poll();
+
+    abstract public void stop();
 
     public static class SensorInitData {
         public TeamColor teamColor;

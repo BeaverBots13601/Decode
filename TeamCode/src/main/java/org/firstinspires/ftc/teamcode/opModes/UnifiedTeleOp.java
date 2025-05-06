@@ -1,12 +1,15 @@
 package org.firstinspires.ftc.teamcode.opModes;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Globals;
-import org.firstinspires.ftc.teamcode.TelemetryManager;
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanism;
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismClassManager;
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor;
@@ -17,10 +20,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.function.BiConsumer;
 
-// right-front (par0) & left-back (perp) are our drive motors for measuring (port 0 & 3 issue)
-// right-rear slide & specimen slide our precise motors (port 0 & 3 issue)
+/*
+    TODO: Build web-tool that allows robot configuration i.e driver station (ftc-dash)
+    TODO: Add a modification to ftc-dash allowing multiple camera sources.
+ */
 
 public abstract class UnifiedTeleOp extends LinearOpMode {
     /** This field may be immediately changed by the switch state update. */
@@ -36,14 +40,14 @@ public abstract class UnifiedTeleOp extends LinearOpMode {
     private static final List<GamepadButtons> buttonDuplicationExceptions = Arrays.asList();
     public void runOpMode() {
         Globals.initBulkReads(hardwareMap);
-        TelemetryManager robot = new TelemetryManager(telemetry);
-        IMUSensor imu = new IMUSensor(hardwareMap, new SensorDevice.SensorInitData(), robot::writeToTelemetry);
+        MultipleTelemetry telemetry = new MultipleTelemetry(this.telemetry, FtcDashboard.getInstance().getTelemetry());
+        IMUSensor imu = new IMUSensor(hardwareMap, new SensorDevice.SensorInitData(), telemetry);
 
         // InitData
         HardwareMechanism.InitData data = new HardwareMechanism.InitData();
         data.teamColor = teamColor;
         data.driveMode = orientationMode;
-        data.dashboardEnabled = robot.isDashboardEnabled();
+        data.dashboardEnabled = FtcDashboard.getInstance().isEnabled();
 
         // Get a list of all HardwareMechanism classes
         List<Class<HardwareMechanism>> classes = HardwareMechanismClassManager.getMechanisms();
@@ -51,7 +55,7 @@ public abstract class UnifiedTeleOp extends LinearOpMode {
         for (Class<HardwareMechanism> clazz : classes){
             try {
                 // Instantiate each
-                HardwareMechanism mech = clazz.getDeclaredConstructor(HardwareMap.class, HardwareMechanism.InitData.class, BiConsumer.class).newInstance(hardwareMap, data, (BiConsumer<String, Object>) robot::writeToTelemetry);
+                HardwareMechanism mech = clazz.getDeclaredConstructor(HardwareMap.class, HardwareMechanism.InitData.class, Telemetry.class).newInstance(hardwareMap, data, telemetry);
                 // we do this sanity checking before determining whether the class is valid to catch issues earlier in dev
                 for (GamepadButtons button : mech.getUsedButtons()){
                     if (!buttons.add(button) && !buttonDuplicationExceptions.contains(button)){
@@ -69,12 +73,17 @@ public abstract class UnifiedTeleOp extends LinearOpMode {
         previousGamepadOne.copy(currentGamepadOne);
         previousGamepadTwo.copy(currentGamepadTwo);
 
+        telemetry.update();
+
         waitForStart();
         for (HardwareMechanism mechanism : mechanisms){
             mechanism.start();
         }
 
+        ElapsedTime timer = new ElapsedTime();
         while (opModeIsActive()) {
+            timer.reset();
+
             currentGamepadOne.copy(gamepad1);
             currentGamepadTwo.copy(gamepad2);
 
@@ -95,7 +104,12 @@ public abstract class UnifiedTeleOp extends LinearOpMode {
 
             previousGamepadOne.copy(currentGamepadOne);
             previousGamepadTwo.copy(currentGamepadTwo);
-            robot.updateTelemetry();
+            telemetry.addData("Time This Loop (ms)", timer.milliseconds());
+            telemetry.update();
+        }
+
+        for (HardwareMechanism mechanism : mechanisms){
+            mechanism.stop();
         }
     }
 }

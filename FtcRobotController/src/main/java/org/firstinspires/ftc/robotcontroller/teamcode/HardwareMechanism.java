@@ -7,8 +7,9 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+
 import java.util.List;
-import java.util.function.BiConsumer;
 
 /**
  * A class representing one combined mechanism on the robot, consisting of all related hardware components and function which is called on initialization, start, and every loop. Implementations of this class should expose such functions as are needed for autonomous.
@@ -17,15 +18,14 @@ import java.util.function.BiConsumer;
  */
 public abstract class HardwareMechanism {
     public boolean available;
-    protected BiConsumer<String, Object> telemetry;
+    protected Telemetry telemetry;
     /**
      * WARNING: After using the constructor, you MUST check the field 'available'. Treat a false value as null.
      *
      * @param data          Starting data for the hardware.
-     * @param telemetryFunc The telemetry function, with the parameters Caption, Data.
      */
-    public HardwareMechanism(HardwareMap hardwareMap, InitData data, BiConsumer<String, Object> telemetryFunc){
-        telemetry = telemetryFunc;
+    public HardwareMechanism(HardwareMap hardwareMap, InitData data, Telemetry telemetry){
+        this.telemetry = telemetry;
     }
 
     /**
@@ -41,13 +41,17 @@ public abstract class HardwareMechanism {
     abstract public void run(RunData data);
 
     /**
+     * Call after ending the main program. Allows the class to do cleanup.
+     */
+    abstract public void stop();
+
+    /**
      * @return The list of all GamepadButtons this hardware mechanism uses in run().
      */
     abstract public List<GamepadButtons> getUsedButtons();
 
     // static utility members
-    // todo make me protected once refactor complete
-    public static Servo setUpServo(HardwareMap hardwareMap, String servoName) {
+    protected static Servo setUpServo(HardwareMap hardwareMap, String servoName) {
         Servo servo = hardwareMap.get(Servo.class, servoName);
         return servo;
     }
@@ -56,7 +60,7 @@ public abstract class HardwareMechanism {
      * Creates a default motor with the settings 'RUN_USING_ENCODER' and 'FLOAT on zero power'.
      * Reverses if name includes left.
      */
-    public static DcMotorEx createDefaultMotor(HardwareMap hardwareMap, String motorName) {
+    protected static DcMotorEx createDefaultMotor(HardwareMap hardwareMap, String motorName) {
         DcMotorEx motor = hardwareMap.get(DcMotorEx.class, motorName);
         motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -65,6 +69,17 @@ public abstract class HardwareMechanism {
             motor.setDirection(DcMotorSimple.Direction.REVERSE);
         }
         return motor;
+    }
+
+    /**
+     * Sleeps. Warning: The main loop working well depends on run() functions taking only a short time.
+     * Sleeping usually disrupts this illusion and therefore should only be done in situations
+     * where it's okay to completely cease driver control. (Also note there is no abort.)
+     */
+    protected static void sleep(long millis){
+        try {
+            Thread.sleep(millis);
+        } catch (Exception ignored){}
     }
 
     public static class RunData {

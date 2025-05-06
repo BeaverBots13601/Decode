@@ -4,17 +4,17 @@ import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.misc.AprilTagData;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiConsumer;
 
 public class Limelight extends SensorDevice<List<LLResultTypes.FiducialResult>> {
     private Limelight3A limelight;
-    public Limelight(HardwareMap hardwareMap, SensorInitData initData, BiConsumer<String, Object> telemetryFunc) {
-        super(hardwareMap, initData, telemetryFunc);
+    public Limelight(HardwareMap hardwareMap, SensorInitData initData, Telemetry telemetry) {
+        super(hardwareMap, initData, telemetry);
         try {
             limelight = hardwareMap.get(Limelight3A.class, "limelight");
         } catch (Exception e) {
@@ -37,6 +37,8 @@ public class Limelight extends SensorDevice<List<LLResultTypes.FiducialResult>> 
     public List<LLResultTypes.FiducialResult> poll() {
         return limelight.getLatestResult().getFiducialResults();
     }
+
+    public void stop() {}
 
     public ArrayList<AprilTagData> getAprilTags(){
         ArrayList<AprilTagData> out = new ArrayList<>();

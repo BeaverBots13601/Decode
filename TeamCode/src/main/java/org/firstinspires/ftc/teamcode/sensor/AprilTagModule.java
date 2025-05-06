@@ -5,6 +5,7 @@ import android.util.Size;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -16,7 +17,6 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiConsumer;
 
 /**
  * Handles the scanning and recognition of AprilTags through a dumb webcam.
@@ -32,8 +32,8 @@ public class AprilTagModule extends SensorDevice<List<AprilTagData>> {
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
 
-    public AprilTagModule(HardwareMap hardwareMap, SensorInitData initData, BiConsumer<String, Object> telemetryFunc){
-        super(hardwareMap, initData, telemetryFunc);
+    public AprilTagModule(HardwareMap hardwareMap, SensorInitData initData, Telemetry telemetry){
+        super(hardwareMap, initData, telemetry);
         WebcamName cameraNameObject;
         try {
             cameraNameObject = hardwareMap.get(WebcamName.class, cameraName);
@@ -64,6 +64,8 @@ public class AprilTagModule extends SensorDevice<List<AprilTagData>> {
     }
 
     public void start() {}
+
+    public void stop() {}
 
     /**
      * Takes the current camera view and returns information about all visible AprilTags.
