@@ -106,6 +106,7 @@ import org.firstinspires.ftc.onbotjava.ExternalLibraries;
 import org.firstinspires.ftc.onbotjava.OnBotJavaHelperImpl;
 import org.firstinspires.ftc.onbotjava.OnBotJavaProgrammingMode;
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismClassManager;
+import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismClassManagerKt;
 import org.firstinspires.ftc.robotcore.external.navigation.MotionDetection;
 import org.firstinspires.ftc.robotcore.internal.hardware.android.AndroidBoard;
 import org.firstinspires.ftc.robotcore.internal.network.DeviceNameManagerFactory;
@@ -354,6 +355,7 @@ public class FtcRobotControllerActivity extends Activity
     if (permissionsValidated) {
       ClassManager.getInstance().setOnBotJavaClassHelper(onBotJavaHelper);
       ClassManager.getInstance().registerFilter(new HardwareMechanismClassManager());
+      ClassManager.getInstance().registerFilter(new HardwareMechanismClassManagerKt());
       ClassManagerFactory.registerFilters();
       ClassManagerFactory.processAllClasses();
     }
