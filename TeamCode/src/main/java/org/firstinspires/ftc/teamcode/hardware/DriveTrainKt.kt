@@ -16,22 +16,14 @@ import kotlin.math.max
  * Responsible for managing our four-wheel Mecanum drive. Includes 3 levels of variable speed.
  */
 class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData, private val telemetry: Telemetry) : HardwareMechanismKt() {
-    private var orientationMode = data.driveMode
-    private var driveMotors: Array<DcMotorEx> = emptyArray()
-    private var switch: DigitalChannel? = // optional hardware
+    private val driveMotors: Array<DcMotorEx> = runCatching { createDriveMotors(hardwareMap) }
+        .getOrElse { available = false; emptyArray() }
+    private val switch: DigitalChannel? = // optional hardware
         runCatching { hardwareMap.get(DigitalChannel::class.java, "switch") }.getOrNull()
-    private var referenceAngle = Globals.robotHeading
+    private val referenceAngle = Globals.robotHeading // saved from auto, or 0 by default.
     private val dashboardEnabled = data.dashboardEnabled
     private var currentSpeedMode = SPEEDS.NORMAL
-
-    init {
-        available = true
-        try {
-            driveMotors = createDriveMotors(hardwareMap)
-        } catch (ignored: Exception){
-            available = false
-        }
-    }
+    private var orientationMode = data.driveMode
 
     override fun start() {}
 
@@ -44,7 +36,7 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
 
         val speedNow = currentSpeedMode.speed
 
-        val tmp_deadzoneadjust = 2;
+        val tmp_deadzoneadjust = 2
 
         val stickX = (data.currentGamepadOne.left_stick_x * tmp_deadzoneadjust).toDouble()
         val stickY = (data.currentGamepadOne.left_stick_y * tmp_deadzoneadjust).toDouble()
@@ -61,7 +53,7 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         val rotatedStickY = rotatedPosition.y
         val orientation = data.imuAngleRad
         telemetry.addData("IMU DATA (rads)", orientation)
-        telemetry.addData("Reference Angle (rads)", Globals.robotHeading)
+        telemetry.addData("Reference Angle (rads)", referenceAngle)
 
         val maxPower = max(abs(stickY) + abs(stickX) + abs(stickRotation), 1.0)
 
@@ -132,6 +124,9 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         }
     }
 
+    /**
+     * Returns the switch's state. Note that if a switch is not attached (or not configured), this will always return true.
+     */
     fun getSwitchState(): Boolean { return switch?.state ?: true }
 
     companion object : HardwareMechanismSingletonManager<DriveTrainKt>(::DriveTrainKt)

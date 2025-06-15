@@ -9,6 +9,9 @@ class HardwareMechanismClassManagerKt : ClassFilter {
     companion object {
         private var mechanisms: MutableList<KClass<out HardwareMechanismKt>> = mutableListOf()
 
+        /**
+         * @return The list of all Classes that extend HardwareMechanismKt.
+         */
         fun getMechanisms(): List<KClass<out HardwareMechanismKt>> {
             if (mechanisms.isEmpty()) {
                 // This really should never occur unless somehow we've deleted every single HardwareMechanism, including the drivetrain. (Or a bug.)
