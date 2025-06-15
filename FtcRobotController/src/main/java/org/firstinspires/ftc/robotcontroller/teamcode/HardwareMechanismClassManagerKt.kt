@@ -37,7 +37,7 @@ class HardwareMechanismClassManagerKt : ClassFilter {
             return
         }
 
-        mechanisms.add(clazz as KClass<out HardwareMechanismKt>)
+        mechanisms.add(clazz.kotlin as KClass<out HardwareMechanismKt>)
     }
 
 
