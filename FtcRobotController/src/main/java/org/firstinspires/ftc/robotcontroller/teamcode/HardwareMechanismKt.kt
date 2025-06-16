@@ -15,8 +15,6 @@ import org.firstinspires.ftc.robotcore.external.Telemetry
  * Subclasses should include a private constructor(HardwareMap, InitData, Telemetry). Subclasses should also have a companion object extending [HardwareMechanismSingletonManager], supplied with the subclass type and a reference to the constructor.
  */
 abstract class HardwareMechanismKt {
-    protected var available: Boolean = true
-
     /**
      * Call after doing waitForStart(). Allows the class to do setup that can only legally be done after starting.
      */
@@ -44,9 +42,8 @@ abstract class HardwareMechanismKt {
         @Synchronized
         fun getInstance(hardwareMap: HardwareMap, data: InitData, telemetry: Telemetry): T? {
             instance = null
-            constructor(hardwareMap, data, telemetry).also {
-                // .also runs a function with the output as 'it'
-                if(it.available) instance = it
+            runCatching {
+                instance = constructor(hardwareMap, data, telemetry)
             }
             return instance
         }

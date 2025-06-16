@@ -16,8 +16,7 @@ import kotlin.math.max
  * Responsible for managing our four-wheel Mecanum drive. Includes 3 levels of variable speed.
  */
 class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData, private val telemetry: Telemetry) : HardwareMechanismKt() {
-    private val driveMotors: Array<DcMotorEx> = runCatching { createDriveMotors(hardwareMap) }
-        .getOrElse { available = false; emptyArray() }
+    private val driveMotors: Array<DcMotorEx> = createDriveMotors(hardwareMap)
     private val switch: DigitalChannel? = // optional hardware
         runCatching { hardwareMap.get(DigitalChannel::class.java, "switch") }.getOrNull()
     private val referenceAngle = Globals.robotHeading // saved from auto, or 0 by default.
