@@ -43,7 +43,8 @@ abstract class HardwareMechanismKt {
 
         @Synchronized
         fun getInstance(hardwareMap: HardwareMap, data: InitData, telemetry: Telemetry): T? {
-            if(instance == null) constructor(hardwareMap, data, telemetry).also {
+            instance = null
+            constructor(hardwareMap, data, telemetry).also {
                 // .also runs a function with the output as 'it'
                 if(it.available) instance = it
             }
