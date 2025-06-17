@@ -35,7 +35,7 @@ abstract class HardwareMechanismKt {
      */
     abstract val usedButtons: Array<GamepadButtons>
 
-    open class HardwareMechanismSingletonManager<out T : HardwareMechanismKt>(private val constructor: (HardwareMap, InitData, Telemetry) -> T) {
+    open class HardwareMechanismSingletonManager<T : HardwareMechanismKt>(private val constructor: (HardwareMap, InitData, Telemetry) -> T) {
         @Volatile
         private var instance: T? = null
 
