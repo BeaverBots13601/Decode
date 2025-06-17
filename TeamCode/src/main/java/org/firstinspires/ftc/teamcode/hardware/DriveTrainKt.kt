@@ -18,7 +18,7 @@ import kotlin.math.max
 class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData, private val telemetry: Telemetry) : HardwareMechanismKt() {
     private val driveMotors: Array<DcMotorEx> = createDriveMotors(hardwareMap)
     private val switch: DigitalChannel? = // optional hardware
-        runCatching { hardwareMap.get(DigitalChannel::class.java, "switch") }.getOrNull()
+        runCatching { hardwareMap.digitalChannel.get("switch") }.getOrNull()
     private val referenceAngle = Globals.robotHeading // saved from auto, or 0 by default.
     private val dashboardEnabled = data.dashboardEnabled
     private var currentSpeedMode = SPEEDS.NORMAL
