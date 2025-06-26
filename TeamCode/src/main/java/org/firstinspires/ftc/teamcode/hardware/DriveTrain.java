@@ -110,16 +110,16 @@ public class DriveTrain extends HardwareMechanism {
         setDriveMotors(new double[]{leftFrontPower, leftBackPower, rightFrontPower, rightBackPower}, DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         // speed ctrls (gp 1)
-        if (data.currentGamepadOne.dpad_right && !data.previousGamepadOne.dpad_right) {
+        if (data.currentGamepadOne.dpadRightWasPressed()) {
             currentSpeedMode = SPEEDS.FAST;
         }
-        if (data.currentGamepadOne.dpad_up && !data.previousGamepadOne.dpad_up) {
+        if (data.currentGamepadOne.dpadUpWasPressed()) {
             currentSpeedMode = SPEEDS.NORMAL;
         }
-        if (data.currentGamepadOne.dpad_left && !data.previousGamepadOne.dpad_left) {
+        if (data.currentGamepadOne.dpadLeftWasPressed()) {
             currentSpeedMode = SPEEDS.SLOW;
         }
-        if (data.currentGamepadOne.dpad_down && !data.previousGamepadOne.dpad_down && dashboardEnabled) {
+        if (data.currentGamepadOne.dpadDownWasPressed() && dashboardEnabled) {
             currentSpeedMode = SPEEDS.CUSTOM_FTC_DASHBOARD;
         }
     }
