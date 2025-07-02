@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.sensor
 
+import com.acmerobotics.dashboard.FtcDashboard
 import com.qualcomm.hardware.limelightvision.LLResultTypes
 import com.qualcomm.hardware.limelightvision.Limelight3A
 import com.qualcomm.robotcore.hardware.HardwareMap
@@ -13,6 +14,7 @@ class LimelightKt private constructor(hardwareMap: HardwareMap, initData: Sensor
     init {
         limelight.pipelineSwitch(0)
         limelight.start()
+        FtcDashboard.getInstance().startCameraStream(limelight, 0.0)
     }
 
     override fun start() {}

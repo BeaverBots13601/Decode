@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.sensor;
 
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -23,6 +24,8 @@ public class Limelight extends SensorDevice<List<LLResultTypes.FiducialResult>> 
         }
 
         limelight.pipelineSwitch(0);
+
+        FtcDashboard.getInstance().startCameraStream(limelight, 0);
 
         available = true;
     }
