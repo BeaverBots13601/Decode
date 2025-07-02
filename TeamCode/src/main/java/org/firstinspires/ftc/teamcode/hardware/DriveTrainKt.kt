@@ -7,8 +7,8 @@ import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcore.external.Telemetry
-import org.firstinspires.ftc.teamcode.Globals
-import org.firstinspires.ftc.teamcode.misc.Pose
+import org.firstinspires.ftc.teamcode.GlobalsKt
+import org.firstinspires.ftc.teamcode.misc.PoseKt
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -19,7 +19,7 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
     private val driveMotors: Array<DcMotorEx> = createDriveMotors(hardwareMap)
     private val switch: DigitalChannel? = // optional hardware
         runCatching { hardwareMap.digitalChannel.get("switch") }.getOrNull()
-    private val referenceAngle = Globals.robotHeading // saved from auto, or 0 by default.
+    private val referenceAngle = GlobalsKt.robotHeading // saved from auto, or 0 by default.
     private val dashboardEnabled = data.dashboardEnabled
     private var currentSpeedMode = SPEEDS.NORMAL
     private var orientationMode = data.driveMode
@@ -43,10 +43,10 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
 
         telemetry.addData("Current Orientation Mode", orientationMode)
         val directionRotation: Double = if (orientationMode == DriveMode.FIELD) {
-            -Pose.normalizeAngle(data.imuAngleRad - referenceAngle)
+            -PoseKt.normalizeAngle(data.imuAngleRad - referenceAngle)
         } else 0.0
 
-        val rotatedPosition = Pose.rotatePosition(stickX, stickY, directionRotation)
+        val rotatedPosition = PoseKt.rotatePosition(stickX, stickY, directionRotation)
 
         val rotatedStickX = rotatedPosition.x
         val rotatedStickY = rotatedPosition.y
@@ -103,7 +103,7 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         NORMAL(0.65),
         FAST(0.80),
         SLOW(0.40),
-        CUSTOM_FTC_DASHBOARD(Globals.CUSTOM_FTC_DASHBOARD_SPEED)
+        CUSTOM_FTC_DASHBOARD(GlobalsKt.CUSTOM_FTC_DASHBOARD_SPEED)
     }
 
     private fun createDriveMotors(hardwareMap: HardwareMap): Array<DcMotorEx> {

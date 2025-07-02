@@ -11,7 +11,7 @@ import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt.HardwareMechanismSingletonManager
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt.DriveMode
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
-import org.firstinspires.ftc.teamcode.Globals
+import org.firstinspires.ftc.teamcode.GlobalsKt
 import org.firstinspires.ftc.teamcode.sensor.IMUSensor
 import org.firstinspires.ftc.teamcode.sensor.SensorDevice
 import kotlin.reflect.full.companionObjectInstance
@@ -32,7 +32,7 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
     private val buttonDuplicationExceptions: Array<GamepadButtons> = arrayOf()
 
     override fun runOpMode() {
-        Globals.initBulkReads(hardwareMap)
+        GlobalsKt.initBulkReads(hardwareMap)
 
         val telemetry = MultipleTelemetry(this.telemetry, FtcDashboard.getInstance().telemetry)
         val imu = IMUSensor(hardwareMap, SensorDevice.SensorInitData(), telemetry)

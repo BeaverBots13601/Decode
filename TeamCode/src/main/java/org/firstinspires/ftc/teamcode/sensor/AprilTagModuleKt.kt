@@ -7,7 +7,7 @@ import org.firstinspires.ftc.robotcore.external.Telemetry
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit
-import org.firstinspires.ftc.teamcode.misc.AprilTagData
+import org.firstinspires.ftc.teamcode.misc.AprilTagDataKt
 import org.firstinspires.ftc.vision.VisionPortal
 import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor
@@ -17,7 +17,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor
  *
  * See also Limelight.
  */
-class AprilTagModuleKt private constructor(hardwareMap: HardwareMap, initData: SensorInitData, private val telemetry: Telemetry) : SensorDeviceKt<List<AprilTagData>>() {
+class AprilTagModuleKt private constructor(hardwareMap: HardwareMap, initData: SensorInitData, private val telemetry: Telemetry) : SensorDeviceKt<List<AprilTagDataKt>>() {
     // magic numbers
     private val cameraName = "camera"
     private val cameraWidth = 1280
@@ -51,8 +51,8 @@ class AprilTagModuleKt private constructor(hardwareMap: HardwareMap, initData: S
      * Takes the current camera view and returns information about all visible AprilTags.
      * @return An array of objects, each signifying a detection of an AprilTag and containing data about it.
      */
-    override fun poll(): List<AprilTagData> {
-        return aprilTag.detections.map { AprilTagData(it.id, it.ftcPose.y, it.hamming) }
+    override fun poll(): List<AprilTagDataKt> {
+        return aprilTag.detections.map { AprilTagDataKt(it.id, it.ftcPose.y, it.hamming) }
     }
 
     companion object : SensorDeviceSingletonManager<AprilTagModuleKt>(::AprilTagModuleKt)
