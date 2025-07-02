@@ -30,7 +30,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
     private val startPose = Pose2d(24.0, -60.0, -PI / 2)
 
     private val tel = MultipleTelemetry(super.telemetry, FtcDashboard.getInstance().telemetry)
-    private val roadrunnerDrive = MecanumDrive(hardwareMap, startPose)
+    private val roadrunnerDrive by lazy { MecanumDrive(hardwareMap, startPose) }
     private val limelight by lazy { LimelightKt.getInstance(hardwareMap, SensorDeviceKt.SensorInitData(
         currentLocation.teamColor,
         FtcDashboard.getInstance().isEnabled,
