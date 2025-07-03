@@ -104,3 +104,23 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         Alternate
     }
 }
+
+@Autonomous(name = "Kotlin Blue Close Autonomous", group = "CompetitionKt")
+class BlueCloseAutonomousKt : UnifiedAutonomousKt() {
+    override val currentLocation = Locations.BlueClose
+}
+
+@Autonomous(name = "Kotlin Blue Far Autonomous", group = "CompetitionKt")
+class BlueFarAutonomousKt : UnifiedAutonomousKt() {
+    override val currentLocation = Locations.BlueFar
+}
+
+@Autonomous(name = "Kotlin Red Close Autonomous", group = "CompetitionKt")
+class RedCloseAutonomousKt : UnifiedAutonomousKt() {
+    override val currentLocation = Locations.RedClose
+}
+
+@Autonomous(name = "Kotlin Red Far Autonomous", group = "CompetitionKt")
+class RedFarAutonomousKt : UnifiedAutonomousKt() {
+    override val currentLocation = Locations.RedFar
+}
