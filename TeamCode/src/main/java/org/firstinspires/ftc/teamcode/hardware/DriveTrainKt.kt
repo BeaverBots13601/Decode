@@ -96,7 +96,7 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
     )
 
     private enum class DriveMotorName { // expecting to be same for forseeable future
-        LeftFront, LeftBack, RightFront, RightBack
+        leftFront, leftBack, rightFront, rightBack
     }
 
     private enum class SPEEDS(val speed: Double) {
@@ -107,11 +107,11 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
     }
 
     private fun createDriveMotors(hardwareMap: HardwareMap): Array<DcMotorEx> {
-        val out = emptyArray<DcMotorEx>()
+        var out = emptyArray<DcMotorEx>()
         for (driveMotorName in DriveMotorName.entries) {
             val driveMotor = createDefaultMotor(hardwareMap, driveMotorName.name)
             driveMotor.mode = RunMode.RUN_WITHOUT_ENCODER
-            out[driveMotorName.ordinal] = driveMotor
+            out = out.plus(driveMotor)
         }
         return out
     }
