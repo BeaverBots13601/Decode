@@ -28,7 +28,7 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
 
     override fun run(data: RunData) {
         orientationMode = if (getSwitchState()) {
-            DriveMode.ROBOT // fall-back to robot
+            DriveMode.ROBOT // if no switch is attached, fall back to robot mode.
         } else {
             DriveMode.FIELD
         }
@@ -38,7 +38,7 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         val tmp_deadzoneadjust = 2
 
         val stickX = (data.currentGamepadOne.left_stick_x * tmp_deadzoneadjust).toDouble()
-        val stickY = (data.currentGamepadOne.left_stick_y * tmp_deadzoneadjust).toDouble()
+        val stickY = (data.currentGamepadOne.left_stick_y * tmp_deadzoneadjust).toDouble() // fixme does this need a negative?
         val stickRotation = (data.currentGamepadOne.right_stick_x * tmp_deadzoneadjust).toDouble()
 
         telemetry.addData("Current Orientation Mode", orientationMode)
@@ -70,16 +70,16 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         setDriveMotors(arrayOf(leftFrontPower, leftBackPower, rightFrontPower, rightBackPower), RunMode.RUN_WITHOUT_ENCODER)
 
         // speed controls (gp1)
-        if (data.currentGamepadOne.dpad_right && !data.previousGamepadOne.dpad_right){
+        if (data.currentGamepadOne.dpadRightWasPressed()){
             currentSpeedMode = SPEEDS.FAST
         }
-        if (data.currentGamepadOne.dpad_up && !data.previousGamepadOne.dpad_up){
+        if (data.currentGamepadOne.dpadUpWasPressed()){
             currentSpeedMode = SPEEDS.NORMAL
         }
-        if (data.currentGamepadOne.dpad_left && !data.previousGamepadOne.dpad_left){
+        if (data.currentGamepadOne.dpadLeftWasPressed()){
             currentSpeedMode = SPEEDS.SLOW
         }
-        if (data.currentGamepadOne.dpad_down && !data.previousGamepadOne.dpad_down && dashboardEnabled){
+        if (data.currentGamepadOne.dpadDownWasPressed() && dashboardEnabled){
             currentSpeedMode = SPEEDS.CUSTOM_FTC_DASHBOARD
         }
     }

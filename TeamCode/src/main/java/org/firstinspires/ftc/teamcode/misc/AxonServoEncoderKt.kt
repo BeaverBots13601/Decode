@@ -23,7 +23,7 @@ class AxonServoEncoderKt(private val channel: AnalogInput) {
         private set
 
     companion object {
-        var warningMessageSet = false
+        private var warningMessageSet = false
     }
 
     private var thread = Thread {

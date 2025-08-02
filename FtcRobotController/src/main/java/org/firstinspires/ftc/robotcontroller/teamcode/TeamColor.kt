@@ -1,6 +1,6 @@
-package org.firstinspires.ftc.robotcontroller.teamcode;
+package org.firstinspires.ftc.robotcontroller.teamcode
 
-public enum TeamColor {
+enum class TeamColor {
     RED,
     BLUE,
     UNKNOWN,

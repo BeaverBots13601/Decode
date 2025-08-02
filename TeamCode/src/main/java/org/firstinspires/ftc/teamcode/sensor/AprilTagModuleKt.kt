@@ -15,7 +15,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor
 /**
  * Handles the scanning and recognition of AprilTags through a dumb webcam.
  *
- * See also Limelight.
+ * See also [Limelight].
  */
 class AprilTagModuleKt private constructor(hardwareMap: HardwareMap, initData: SensorInitData, private val telemetry: Telemetry) : SensorDeviceKt<List<AprilTagDataKt>>() {
     // magic numbers

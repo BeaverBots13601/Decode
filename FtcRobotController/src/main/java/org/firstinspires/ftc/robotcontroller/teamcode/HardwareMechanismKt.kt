@@ -31,7 +31,7 @@ abstract class HardwareMechanismKt {
     abstract fun stop()
 
     /**
-     * The list of all [GamepadButtons] this hardware mechanism uses in [run].
+     * The array of all [GamepadButtons] this hardware mechanism uses in [run].
      */
     abstract val usedButtons: Array<GamepadButtons>
 

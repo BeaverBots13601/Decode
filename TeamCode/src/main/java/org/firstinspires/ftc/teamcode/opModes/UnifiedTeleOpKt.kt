@@ -13,9 +13,14 @@ import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt.Hardwa
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt.DriveMode
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
 import org.firstinspires.ftc.teamcode.GlobalsKt
-import org.firstinspires.ftc.teamcode.sensor.IMUSensor
-import org.firstinspires.ftc.teamcode.sensor.SensorDevice
+import org.firstinspires.ftc.teamcode.sensor.IMUSensorKt
+import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
 import kotlin.reflect.full.companionObjectInstance
+
+/*
+    TODO: Build web-tool that allows robot configuration i.e driver station (ftc-dash)
+    TODO: Add a modification to ftc-dash allowing multiple camera sources.
+ */
 
 abstract class UnifiedTeleOpKt : LinearOpMode() {
     /** This field may be immediately changed by the switch state update. */
@@ -36,7 +41,11 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
         GlobalsKt.initBulkReads(hardwareMap)
 
         val telemetry = MultipleTelemetry(this.telemetry, FtcDashboard.getInstance().telemetry)
-        val imu = IMUSensor(hardwareMap, SensorDevice.SensorInitData(), telemetry)
+        val imu = IMUSensorKt.getInstance(
+            hardwareMap,
+            SensorDeviceKt.SensorInitData(teamColor, FtcDashboard.getInstance().isEnabled),
+            telemetry
+        ) ?: throw RuntimeException("Failed to initialize IMU.")
 
         // InitData
         val initData = HardwareMechanismKt.InitData(
@@ -102,25 +111,25 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
     }
 }
 
-@TeleOp(name = "Kotlin Blue TeleOp Controls (Field)", group = "CompetitionKt")
+@TeleOp(name = "Blue TeleOp Controls (Field)", group = "Competition")
 class FieldTeleOpOpModeBlueKt : UnifiedTeleOpKt() {
     override val orientationMode = HardwareMechanismKt.DriveMode.FIELD
     override val teamColor = TeamColor.BLUE
 }
 
-@TeleOp(name = "Kotlin Red TeleOp Controls (Field)", group = "CompetitionKt")
+@TeleOp(name = "Red TeleOp Controls (Field)", group = "Competition")
 class FieldTeleOpOpModeRedKt : UnifiedTeleOpKt() {
     override val orientationMode = HardwareMechanismKt.DriveMode.FIELD
     override val teamColor = TeamColor.RED
 }
 
-@TeleOp(name = "Kotlin Blue TeleOp Controls (Robot)", group = "CompetitionKt")
+@TeleOp(name = "Blue TeleOp Controls (Robot)", group = "Competition")
 class RobotTeleOpOpModeBlueKt : UnifiedTeleOpKt() {
     override val orientationMode = HardwareMechanismKt.DriveMode.ROBOT
     override val teamColor = TeamColor.BLUE
 }
 
-@TeleOp(name = "Kotlin Red TeleOp Controls (Robot)", group = "CompetitionKt")
+@TeleOp(name = "Red TeleOp Controls (Robot)", group = "Competition")
 class RobotTeleOpOpModeRedKt : UnifiedTeleOpKt() {
     override val orientationMode = HardwareMechanismKt.DriveMode.ROBOT
     override val teamColor = TeamColor.RED

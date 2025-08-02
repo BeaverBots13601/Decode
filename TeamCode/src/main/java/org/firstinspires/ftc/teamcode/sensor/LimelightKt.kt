@@ -24,7 +24,7 @@ class LimelightKt private constructor(hardwareMap: HardwareMap, initData: Sensor
      */
     override fun poll(): List<LLResultTypes.FiducialResult> { return limelight.latestResult.fiducialResults }
 
-    override fun stop() { limelight.stop() }
+    override fun stop() {}
 
     fun getAprilTags(): List<AprilTagDataKt> {
         return limelight.latestResult.fiducialResults.map { AprilTagDataKt(it.fiducialId, it.targetPoseRobotSpace.position.z, 0) }

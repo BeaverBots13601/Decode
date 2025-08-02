@@ -1,9 +1,9 @@
-package org.firstinspires.ftc.robotcontroller.teamcode;
+package org.firstinspires.ftc.robotcontroller.teamcode
 
 /**
  * An enum of literally every button, separated by gamepad number.
  */
-public enum GamepadButtons {
+enum class GamepadButtons {
     // triggers (gp1)
     GP1_LEFT_TRIGGER,
     GP1_RIGHT_TRIGGER,

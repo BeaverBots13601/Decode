@@ -5,6 +5,7 @@ import org.firstinspires.ftc.robotcore.internal.opmode.ClassFilter
 import java.lang.reflect.Modifier
 import kotlin.reflect.KClass
 
+// TODO: Sinister (https://docs.dairy.foundation/Sinister) is an option. If we lose the ability to do class filtering like this, it may become necessary.
 class HardwareMechanismClassManagerKt : ClassFilter {
     companion object {
         private var mechanisms: MutableList<KClass<out HardwareMechanismKt>> = mutableListOf()

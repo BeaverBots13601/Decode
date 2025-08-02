@@ -17,7 +17,7 @@ import org.firstinspires.ftc.teamcode.sensor.LimelightKt
 import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
 import kotlin.math.PI
 
-@Autonomous(name="Automatic Autonomous")
+@Autonomous(name="Automatic Autonomous", group="Competition")
 @Disabled
 open class UnifiedAutonomousKt : LinearOpMode() {
     //private val propLocation: WebcamPropIdentificationKt.PropLocation
@@ -58,9 +58,11 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             }
 
             if (importantTag == null) {
-                // uh oh
+                // Panic case
             } else if(importantTag.fiducialId == 12) {
-
+                // Do something based off the tag
+            } else if(importantTag.fiducialId == 15) {
+                // Do something different with the information
             }
         }
 
@@ -71,7 +73,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         tel.addData("INIT STATUS", "READY")
         tel.update()
 
-        waitForStart()
+        waitForStart() // setup done actually do things
 
         when(currentLocation) {
             Locations.BlueFar,
@@ -105,22 +107,22 @@ open class UnifiedAutonomousKt : LinearOpMode() {
     }
 }
 
-@Autonomous(name = "Kotlin Blue Close Autonomous", group = "CompetitionKt")
+@Autonomous(name = "Blue Close Autonomous", group = "Competition")
 class BlueCloseAutonomousKt : UnifiedAutonomousKt() {
     override val currentLocation = Locations.BlueClose
 }
 
-@Autonomous(name = "Kotlin Blue Far Autonomous", group = "CompetitionKt")
+@Autonomous(name = "Blue Far Autonomous", group = "Competition")
 class BlueFarAutonomousKt : UnifiedAutonomousKt() {
     override val currentLocation = Locations.BlueFar
 }
 
-@Autonomous(name = "Kotlin Red Close Autonomous", group = "CompetitionKt")
+@Autonomous(name = "Red Close Autonomous", group = "Competition")
 class RedCloseAutonomousKt : UnifiedAutonomousKt() {
     override val currentLocation = Locations.RedClose
 }
 
-@Autonomous(name = "Kotlin Red Far Autonomous", group = "CompetitionKt")
+@Autonomous(name = "Red Far Autonomous", group = "Competition")
 class RedFarAutonomousKt : UnifiedAutonomousKt() {
     override val currentLocation = Locations.RedFar
 }

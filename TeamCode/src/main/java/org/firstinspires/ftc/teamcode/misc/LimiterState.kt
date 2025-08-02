@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.misc;
 
-public enum LimiterState {
+enum class LimiterState {
     FAR,
     NEAR,
     NONE

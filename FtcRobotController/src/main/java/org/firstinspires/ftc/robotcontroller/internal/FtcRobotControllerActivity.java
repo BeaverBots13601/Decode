@@ -105,7 +105,6 @@ import org.firstinspires.ftc.ftccommon.internal.ProgramAndManageActivity;
 import org.firstinspires.ftc.onbotjava.ExternalLibraries;
 import org.firstinspires.ftc.onbotjava.OnBotJavaHelperImpl;
 import org.firstinspires.ftc.onbotjava.OnBotJavaProgrammingMode;
-import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismClassManager;
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismClassManagerKt;
 import org.firstinspires.ftc.robotcore.external.navigation.MotionDetection;
 import org.firstinspires.ftc.robotcore.internal.hardware.android.AndroidBoard;
@@ -127,7 +126,6 @@ import org.firstinspires.ftc.robotcore.internal.ui.UILocation;
 import org.firstinspires.ftc.robotcore.internal.webserver.RobotControllerWebInfo;
 import org.firstinspires.ftc.robotserver.internal.programmingmode.ProgrammingModeManager;
 import org.firstinspires.inspection.RcInspectionActivity;
-import org.threeten.bp.YearMonth;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.FileNotFoundException;
@@ -354,7 +352,6 @@ public class FtcRobotControllerActivity extends Activity
      */
     if (permissionsValidated) {
       ClassManager.getInstance().setOnBotJavaClassHelper(onBotJavaHelper);
-      ClassManager.getInstance().registerFilter(new HardwareMechanismClassManager());
       ClassManager.getInstance().registerFilter(new HardwareMechanismClassManagerKt());
       ClassManagerFactory.registerFilters();
       ClassManagerFactory.processAllClasses();
