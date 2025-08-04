@@ -28,7 +28,7 @@ object GlobalsKt {
     fun initBulkReads(hardwareMap: HardwareMap){
         val allHubs = hardwareMap.getAll(LynxModule::class.java)
         for (hub in allHubs) {
-            hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
+            hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO)
         }
     }
 }

@@ -104,24 +104,24 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
 
 @TeleOp(name = "Blue TeleOp Controls (Field)", group = "Competition")
 class FieldTeleOpOpModeBlueKt : UnifiedTeleOpKt() {
-    override val orientationMode = HardwareMechanismKt.DriveMode.FIELD
+    override val orientationMode = DriveMode.FIELD
     override val teamColor = TeamColor.BLUE
 }
 
 @TeleOp(name = "Red TeleOp Controls (Field)", group = "Competition")
 class FieldTeleOpOpModeRedKt : UnifiedTeleOpKt() {
-    override val orientationMode = HardwareMechanismKt.DriveMode.FIELD
+    override val orientationMode = DriveMode.FIELD
     override val teamColor = TeamColor.RED
 }
 
 @TeleOp(name = "Blue TeleOp Controls (Robot)", group = "Competition")
 class RobotTeleOpOpModeBlueKt : UnifiedTeleOpKt() {
-    override val orientationMode = HardwareMechanismKt.DriveMode.ROBOT
+    override val orientationMode = DriveMode.ROBOT
     override val teamColor = TeamColor.BLUE
 }
 
 @TeleOp(name = "Red TeleOp Controls (Robot)", group = "Competition")
 class RobotTeleOpOpModeRedKt : UnifiedTeleOpKt() {
-    override val orientationMode = HardwareMechanismKt.DriveMode.ROBOT
+    override val orientationMode = DriveMode.ROBOT
     override val teamColor = TeamColor.RED
 }

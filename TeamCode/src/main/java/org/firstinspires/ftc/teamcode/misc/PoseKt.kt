@@ -33,12 +33,12 @@ data class PoseKt(
         fun normalizeAngle(angle: Double): Double {
             var out = angle
             while (out > PI) {
-                out -= 2 * PI;
+                out -= 2 * PI
             }
             while (out < -PI) {
-                out += 2 * PI;
+                out += 2 * PI
             }
-            return out;
+            return out
         }
     }
 }

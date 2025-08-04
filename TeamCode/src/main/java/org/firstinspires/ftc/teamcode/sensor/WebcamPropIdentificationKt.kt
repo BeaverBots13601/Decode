@@ -18,7 +18,7 @@ import kotlin.math.max
  * Handles scanning for a colored Team Prop within three regions. The regions it is scanning are
  * visible within FTCDashboard.
  *
- * See also [Limelight].
+ * See also [LimelightKt].
  */
 class WebcamPropIdentificationKt private constructor(hardwareMap: HardwareMap, initData: SensorInitData, private val telemetry: Telemetry) : SensorDeviceKt<WebcamPropIdentificationKt.PropLocation>() {
     // magic numbers
