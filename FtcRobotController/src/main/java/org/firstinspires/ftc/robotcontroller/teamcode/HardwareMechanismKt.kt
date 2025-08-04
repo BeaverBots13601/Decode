@@ -84,8 +84,6 @@ abstract class HardwareMechanismKt {
     data class RunData(
         val currentGamepadOne: Gamepad,
         val currentGamepadTwo: Gamepad,
-        val previousGamepadOne: Gamepad,
-        val previousGamepadTwo: Gamepad,
         val imuAngleRad: Double,
     )
 

@@ -29,8 +29,6 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
 
     private val currentGamepadOne = Gamepad()
     private val currentGamepadTwo = Gamepad()
-    private val previousGamepadOne = Gamepad()
-    private val previousGamepadTwo = Gamepad()
 
     private val mechanisms: MutableList<HardwareMechanismKt> = mutableListOf()
 
@@ -72,9 +70,6 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
             mechanisms.add(mech)
         }
 
-        previousGamepadOne.copy(currentGamepadOne)
-        previousGamepadTwo.copy(currentGamepadTwo)
-
         telemetry.update()
 
         waitForStart()
@@ -93,16 +88,12 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
 
             val runData = HardwareMechanismKt.RunData(
                 currentGamepadOne,
-                previousGamepadOne,
                 currentGamepadTwo,
-                previousGamepadTwo,
                 imuAngleRad = imu.poll().toDouble()
             )
 
             for (mechanism in mechanisms) mechanism.run(runData)
 
-            previousGamepadOne.copy(currentGamepadOne)
-            previousGamepadTwo.copy(currentGamepadTwo)
             telemetry.addData("Time This Loop (ms)", timer.milliseconds())
             telemetry.update()
         }
