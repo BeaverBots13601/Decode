@@ -2,9 +2,11 @@ package org.firstinspires.ftc.teamcode.opModes
 
 import com.acmerobotics.dashboard.FtcDashboard
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry
+import com.qualcomm.hardware.lynx.LynxModule
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 import com.qualcomm.robotcore.hardware.Gamepad
+import com.qualcomm.robotcore.hardware.HardwareMap
 import com.qualcomm.robotcore.util.ElapsedTime
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismClassManagerKt
@@ -12,7 +14,6 @@ import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt.HardwareMechanismSingletonManager
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt.DriveMode
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
-import org.firstinspires.ftc.teamcode.GlobalsKt
 import org.firstinspires.ftc.teamcode.sensor.IMUSensorKt
 import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
 import kotlin.reflect.full.companionObjectInstance
@@ -36,7 +37,7 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
     private val buttonDuplicationExceptions: Array<GamepadButtons> = arrayOf()
 
     override fun runOpMode() {
-        GlobalsKt.initBulkReads(hardwareMap)
+        initBulkReads(hardwareMap)
 
         val telemetry = MultipleTelemetry(this.telemetry, FtcDashboard.getInstance().telemetry)
         val imu = IMUSensorKt.getInstance(
@@ -49,7 +50,8 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
         val initData = HardwareMechanismKt.InitData(
             teamColor = teamColor,
             driveMode = orientationMode,
-            dashboardEnabled = FtcDashboard.getInstance().isEnabled
+            dashboardEnabled = FtcDashboard.getInstance().isEnabled,
+            referenceAngle = blackboard.getOrDefault("robotHeading", imu.poll().toDouble()) as Double,
         )
 
         // Get a list of all HardwareMechanism classes
@@ -124,4 +126,16 @@ class RobotTeleOpOpModeBlueKt : UnifiedTeleOpKt() {
 class RobotTeleOpOpModeRedKt : UnifiedTeleOpKt() {
     override val orientationMode = DriveMode.ROBOT
     override val teamColor = TeamColor.RED
+}
+
+/**
+ * Enables bulk reads which allow faster hardware call times.
+ * Set to auto currently but if speed becomes an issue this can be manually configured.
+ * TODO: Re-home me.
+ */
+fun initBulkReads(hardwareMap: HardwareMap){
+    val allHubs = hardwareMap.getAll(LynxModule::class.java)
+    for (hub in allHubs) {
+        hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO)
+    }
 }

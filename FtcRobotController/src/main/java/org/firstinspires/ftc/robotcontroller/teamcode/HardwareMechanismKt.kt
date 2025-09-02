@@ -79,6 +79,7 @@ abstract class HardwareMechanismKt {
         val teamColor: TeamColor,
         val driveMode: DriveMode,
         val dashboardEnabled: Boolean,
+        val referenceAngle: Double,
     )
 
     data class RunData(

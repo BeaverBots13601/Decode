@@ -11,7 +11,6 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.Disabled
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
-import org.firstinspires.ftc.teamcode.GlobalsKt
 import org.firstinspires.ftc.teamcode.roadrunner.MecanumDrive
 import org.firstinspires.ftc.teamcode.sensor.LimelightKt
 import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
@@ -37,8 +36,8 @@ open class UnifiedAutonomousKt : LinearOpMode() {
     ), tel) ?: throw Exception() }
 
     override fun runOpMode() {
-        GlobalsKt.initBulkReads(hardwareMap)
-        GlobalsKt.robotHeading = 0.0
+        initBulkReads(hardwareMap)
+        blackboard.remove("robotHeading")
 
         // Example autonomous code that can be used. Don't be afraid to expand or remodel it as needed
 
@@ -90,7 +89,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             }
             else -> {}
         }
-
+        blackboard.put("robotHeading", roadrunnerDrive.pose.heading.toDouble())
     }
 
     protected enum class Locations(val teamColor: TeamColor) {
