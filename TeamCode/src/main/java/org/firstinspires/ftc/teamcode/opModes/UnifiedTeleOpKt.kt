@@ -76,6 +76,7 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
 
         waitForStart()
         for (mechanism in mechanisms) mechanism.start()
+        imu.start()
 
         val timer = ElapsedTime()
         while (opModeIsActive()) {
@@ -101,6 +102,7 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
         }
 
         for (mechanism in mechanisms) mechanism.stop()
+        imu.stop()
     }
 }
 
