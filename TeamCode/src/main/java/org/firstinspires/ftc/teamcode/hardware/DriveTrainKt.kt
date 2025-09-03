@@ -26,10 +26,11 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
     override fun start() {}
 
     override fun run(data: RunData) {
-        orientationMode = if (getSwitchState()) {
-            DriveMode.ROBOT // if no switch is attached, fall back to robot mode.
-        } else {
-            DriveMode.FIELD
+        val switchState = getSwitchState()
+        if (switchState != null && switchState) { // if no switch is attached, do nothing
+            orientationMode = DriveMode.ROBOT
+        } else if (switchState != null && !switchState) {
+            orientationMode = DriveMode.FIELD
         }
 
         val speedNow = currentSpeedMode.speed
@@ -123,9 +124,9 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
     }
 
     /**
-     * Returns the switch's state. Note that if a switch is not attached (or not configured), this will always return true.
+     * @return The switch's state. Returns null if a switch is not attached (or not configured)
      */
-    fun getSwitchState(): Boolean { return switch?.state ?: true }
+    fun getSwitchState(): Boolean? { return switch?.state }
 
     companion object : HardwareMechanismSingletonManager<DriveTrainKt>(::DriveTrainKt) {
         // This speed is designed to be set dynamically within FTC Dashboard.
