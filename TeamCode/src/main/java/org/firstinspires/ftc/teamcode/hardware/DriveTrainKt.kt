@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.hardware
 
+import com.acmerobotics.dashboard.config.Config
 import com.qualcomm.robotcore.hardware.DcMotor.RunMode
 import com.qualcomm.robotcore.hardware.DcMotorEx
 import com.qualcomm.robotcore.hardware.DigitalChannel
@@ -14,6 +15,7 @@ import kotlin.math.max
 /**
  * Responsible for managing our four-wheel Mecanum drive. Includes 3 levels of variable speed.
  */
+@Config
 class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData, private val telemetry: Telemetry) : HardwareMechanismKt() {
     private val driveMotors: Array<DcMotorEx> = createDriveMotors(hardwareMap)
     private val switch: DigitalChannel? = // optional hardware
@@ -38,7 +40,7 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         val tmp_deadzoneadjust = 2
 
         val stickX = (data.currentGamepadOne.left_stick_x * tmp_deadzoneadjust).toDouble()
-        val stickY = (data.currentGamepadOne.left_stick_y * tmp_deadzoneadjust).toDouble() // fixme does this need a negative?
+        val stickY = -(data.currentGamepadOne.left_stick_y * tmp_deadzoneadjust).toDouble()
         val stickRotation = (data.currentGamepadOne.right_stick_x * tmp_deadzoneadjust).toDouble()
 
         telemetry.addData("Current Orientation Mode", orientationMode)
@@ -57,9 +59,9 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         val maxPower = max(abs(stickY) + abs(stickX) + abs(stickRotation), 1.0)
 
         val leftFrontPower = (rotatedStickY + rotatedStickX + stickRotation) / maxPower * speedNow
-        val leftBackPower = (rotatedStickY - rotatedStickX + stickRotation) / maxPower * speedNow
+        val leftBackPower = (rotatedStickY + rotatedStickX - stickRotation) / maxPower * speedNow
         val rightFrontPower = (rotatedStickY - rotatedStickX - stickRotation) / maxPower * speedNow
-        val rightBackPower = (rotatedStickY + rotatedStickX - stickRotation) / maxPower * speedNow
+        val rightBackPower = (rotatedStickY - rotatedStickX + stickRotation) / maxPower * speedNow
 
         telemetry.addData("Left Front Power", leftFrontPower)
         telemetry.addData("Left Back Power", leftBackPower)
