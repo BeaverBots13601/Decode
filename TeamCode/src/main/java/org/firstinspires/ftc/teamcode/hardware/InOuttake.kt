@@ -5,7 +5,7 @@ import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcore.external.Telemetry
 
-class Outtake(hardwareMap: HardwareMap, initData: InitData, private val telemetry: Telemetry) : HardwareMechanismKt() {
+class InOuttake(hardwareMap: HardwareMap, initData: InitData, private val telemetry: Telemetry) : HardwareMechanismKt() {
     override fun start() {
         TODO("Not yet implemented")
     }
@@ -20,5 +20,5 @@ class Outtake(hardwareMap: HardwareMap, initData: InitData, private val telemetr
 
     override val usedButtons: Array<GamepadButtons> = emptyArray()
 
-    companion object : HardwareMechanismSingletonManager<Outtake>(::Outtake)
+    companion object : HardwareMechanismSingletonManager<InOuttake>(::InOuttake)
 }

@@ -69,7 +69,7 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         telemetry.addData("Right Back Power", rightBackPower)
         telemetry.addData("Current Speed Mode", currentSpeedMode)
 
-        setDriveMotors(arrayOf(leftFrontPower, leftBackPower, rightFrontPower, rightBackPower), RunMode.RUN_WITHOUT_ENCODER)
+        setDriveMotors(arrayOf(leftFrontPower, leftBackPower, rightFrontPower, rightBackPower), RunMode.RUN_USING_ENCODER)
 
         // speed controls (gp1)
         if (data.currentGamepadOne.dpadRightWasPressed()){
@@ -112,7 +112,7 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         var out = emptyArray<DcMotorEx>()
         for (driveMotorName in DriveMotorName.entries) {
             val driveMotor = createDefaultMotor(hardwareMap, driveMotorName.name)
-            driveMotor.mode = RunMode.RUN_WITHOUT_ENCODER
+            driveMotor.mode = RunMode.RUN_USING_ENCODER
             out = out.plus(driveMotor)
         }
         return out
