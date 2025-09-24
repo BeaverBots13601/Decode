@@ -89,7 +89,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             }
             else -> {}
         }
-        blackboard.put("robotHeading", roadrunnerDrive.pose.heading.toDouble())
+        blackboard.put("robotHeading", roadrunnerDrive.localizer.pose.heading.toDouble())
     }
 
     protected enum class Locations(val teamColor: TeamColor) {
