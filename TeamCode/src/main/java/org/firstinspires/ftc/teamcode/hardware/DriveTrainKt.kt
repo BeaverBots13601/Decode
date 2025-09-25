@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.hardware
 import com.acmerobotics.dashboard.config.Config
 import com.qualcomm.robotcore.hardware.DcMotor.RunMode
 import com.qualcomm.robotcore.hardware.DcMotorEx
+import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.DigitalChannel
 import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
@@ -59,9 +60,9 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         val maxPower = max(abs(stickY) + abs(stickX) + abs(stickRotation), 1.0)
 
         val leftFrontPower = (rotatedStickY + rotatedStickX + stickRotation) / maxPower * speedNow
-        val leftBackPower = (rotatedStickY + rotatedStickX - stickRotation) / maxPower * speedNow
+        val leftBackPower = (rotatedStickY - rotatedStickX + stickRotation) / maxPower * speedNow
         val rightFrontPower = (rotatedStickY - rotatedStickX - stickRotation) / maxPower * speedNow
-        val rightBackPower = (rotatedStickY - rotatedStickX + stickRotation) / maxPower * speedNow
+        val rightBackPower = (rotatedStickY + rotatedStickX - stickRotation) / maxPower * speedNow
 
         telemetry.addData("Left Front Power", leftFrontPower)
         telemetry.addData("Left Back Power", leftBackPower)
@@ -112,6 +113,12 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         var out = emptyArray<DcMotorEx>()
         for (driveMotorName in DriveMotorName.entries) {
             val driveMotor = createDefaultMotor(hardwareMap, driveMotorName.name)
+            if (driveMotorName == DriveMotorName.leftBack) {
+                driveMotor.direction = DcMotorSimple.Direction.FORWARD
+            }
+            if (driveMotorName == DriveMotorName.rightBack) {
+                driveMotor.direction = DcMotorSimple.Direction.REVERSE
+            }
             driveMotor.mode = RunMode.RUN_USING_ENCODER
             out = out.plus(driveMotor)
         }
