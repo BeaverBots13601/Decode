@@ -8,7 +8,7 @@
             <goBILDA5202SeriesMotor name="rightBack" port="3" />
             <ControlHubImuBHI260AP name="imu" port="0" bus="0" />
             <ContinuousRotationServo name="intakeServo" port="0" />
-            <ContinuousRotationServo name="scoopServo" port="1" />
+            <Servo name="scoopServo" port="1" />
             <Servo name="leftTiltServo" port="5" />
             <goBILDAPinpoint name="pinpoint" port="0" bus="0" />
         </LynxModule>
