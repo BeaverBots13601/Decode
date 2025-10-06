@@ -8,7 +8,7 @@ import org.firstinspires.ftc.robotcore.external.Telemetry
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D
 import org.firstinspires.ftc.teamcode.misc.AprilTagDataKt
 
-class LimelightKt private constructor(hardwareMap: HardwareMap, initData: SensorInitData, private val telemetry: Telemetry) : SensorDeviceKt<List<LLResultTypes.FiducialResult>>() {
+class LimelightKt private constructor(hardwareMap: HardwareMap, initData: SensorInitData, private val telemetry: Telemetry) : SensorDeviceKt<List<LLResultTypes.FiducialResult>?>() {
     private val limelight = hardwareMap.get(Limelight3A::class.java, "limelight")
 
     init {
@@ -22,17 +22,28 @@ class LimelightKt private constructor(hardwareMap: HardwareMap, initData: Sensor
     /**
      * @return All AprilTags visible to the Limelight.
      */
-    override fun poll(): List<LLResultTypes.FiducialResult> { return limelight.latestResult.fiducialResults }
+    override fun poll(): List<LLResultTypes.FiducialResult>? {
+        val result = limelight.latestResult
+        return if (result.isValid) {
+            result.fiducialResults
+        } else null
+    }
 
     override fun stop() {}
 
-    fun getAprilTags(): List<AprilTagDataKt> {
-        return limelight.latestResult.fiducialResults.map { AprilTagDataKt(it.fiducialId, it.targetPoseRobotSpace.position.z, 0) }
+    fun getAprilTags(): List<AprilTagDataKt>? {
+        val result = limelight.latestResult
+        return if (result.isValid) {
+            result.fiducialResults.map { AprilTagDataKt(it.fiducialId, it.targetPoseRobotSpace.position.z, 0) }
+        } else null
     }
 
-    fun updateIMUData(angleRad: Double) { limelight.updateRobotOrientation(angleRad) }
-
-    fun getPositionalData(): Pose3D { return limelight.latestResult.botpose_MT2 }
+    fun getPositionalData(): Pose3D? {
+        val result = limelight.latestResult
+        return if (result.isValid) {
+            result.botpose
+        } else null
+    }
 
     companion object : SensorDeviceSingletonManager<LimelightKt>(::LimelightKt)
 }
