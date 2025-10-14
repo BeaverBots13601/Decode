@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.opModes
 
+import android.os.Trace
 import com.acmerobotics.dashboard.FtcDashboard
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry
 import com.qualcomm.hardware.lynx.LynxModule
@@ -8,6 +9,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 import com.qualcomm.robotcore.hardware.Gamepad
 import com.qualcomm.robotcore.hardware.HardwareMap
 import com.qualcomm.robotcore.util.ElapsedTime
+import com.qualcomm.robotcore.util.RobotLog
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismClassManagerKt
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
@@ -92,12 +94,14 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
             val runData = HardwareMechanismKt.RunData(
                 currentGamepadOne,
                 currentGamepadTwo,
-                imuAngleRad = imu.poll().toDouble()
+                imuAngleRad = 0.0
+                // how roadrunner stop so fast in manual ff tune??
             )
 
             for (mechanism in mechanisms) mechanism.run(runData)
 
             telemetry.addData("Time This Loop (ms)", timer.milliseconds())
+            telemetry.addData("Time This Loop (hz)", 1 / timer.seconds())
             telemetry.update()
         }
 

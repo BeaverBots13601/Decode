@@ -10,7 +10,9 @@ import com.qualcomm.hardware.limelightvision.LLResultTypes.FiducialResult
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.Disabled
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
+import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
+import org.firstinspires.ftc.teamcode.hardware.InOuttake
 import org.firstinspires.ftc.teamcode.roadrunner.MecanumDrive
 import org.firstinspires.ftc.teamcode.sensor.LimelightKt
 import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
@@ -26,78 +28,98 @@ open class UnifiedAutonomousKt : LinearOpMode() {
     protected open val pathToFollow = Path.Standard
     protected open val currentLocation = Locations.Unknown
 
-    private val startPose = Pose2d(24.0, -60.0, -PI / 2)
 
-    private val tel = MultipleTelemetry(super.telemetry, FtcDashboard.getInstance().telemetry)
-    private val roadrunnerDrive by lazy { MecanumDrive(hardwareMap, startPose) }
+    private val telemetry = MultipleTelemetry(super.telemetry, FtcDashboard.getInstance().telemetry)
+    private val roadrunnerDrive by lazy { MecanumDrive(hardwareMap, currentLocation.startPose) }
     private val limelight by lazy { LimelightKt.getInstance(hardwareMap, SensorDeviceKt.SensorInitData(
         currentLocation.teamColor,
         FtcDashboard.getInstance().isEnabled,
-    ), tel) ?: throw Exception() }
+    ), telemetry) ?: throw Exception() }
 
     override fun runOpMode() {
+        val inout = InOuttake.getInstance(hardwareMap, HardwareMechanismKt.InitData(
+            currentLocation.teamColor,
+            HardwareMechanismKt.DriveMode.ROBOT,
+            FtcDashboard.getInstance().isEnabled,
+            currentLocation.startPose.heading.real, // todo needs conversion?
+        ), telemetry)
+
+        if (inout == null) throw Error("Inout Initialization Failed")
         initBulkReads(hardwareMap)
         blackboard.remove("robotHeading")
 
-        // Example autonomous code that can be used. Don't be afraid to expand or remodel it as needed
+        val originTAB = roadrunnerDrive.actionBuilder(currentLocation.startPose)
 
-        if(currentLocation == Locations.Unknown) {
-            // limelight apriltag
-            var tags = limelight.poll()
-            var iterations = 0
-            while (tags.isEmpty() && iterations < 500) {
-                sleep(10)
-                iterations++
-                tags = limelight.poll()
+        // todo smartly rotate poses well instead of duplicating
+        val route: SequentialAction = when(currentLocation) {
+            Locations.BlueFar -> { // canonical far
+                SequentialAction(
+                    originTAB.fresh() // back up
+                        .strafeToLinearHeading(Vector2d(-63.0, 24.0), PI / 12).build(),
+                    inout.spinUp(),
+                    inout.launch(),
+                    inout.spinUp(),
+                    inout.launch(),
+                    originTAB.fresh() // park
+                        .strafeToConstantHeading(Vector2d(-63.0, 48.0)).build(),
+                    )
+            }
+            Locations.RedFar -> { // blue far but rotated
+                SequentialAction(
+                    originTAB.fresh() // back up
+                        .strafeToConstantHeading(Vector2d(14.0, -14.0)).build(),
+                    inout.spinUp(),
+                    inout.launch(),
+                    inout.spinUp(),
+                    inout.launch(),
+                    originTAB.fresh() // park
+                        .strafeToLinearHeading(Vector2d(66.0, -12.0), -0.0).build(),
+                )
+            }
+            Locations.BlueClose -> { // canonical close
+                SequentialAction(
+                    originTAB.fresh()
+                        .strafeToConstantHeading(Vector2d(14.0, 14.0)).build(),
+                    inout.spinUp(),
+                    inout.launch(),
+                    inout.spinUp(),
+                    inout.launch(),
+                    originTAB.fresh()
+                        .strafeToLinearHeading(Vector2d(66.0, 12.0), 0.0).build(),
+                )
             }
 
-            var importantTag: FiducialResult? = null
-            for (tag in tags) {
-                if(tag.fiducialId == 12 || tag.fiducialId == 15) importantTag = tag; break
+            Locations.RedClose -> { // blue close but rotated
+                SequentialAction(
+                    originTAB.fresh()
+                        .strafeToLinearHeading(Vector2d(-63.0, -24.0), -PI / 12).build(),
+                    inout.spinUp(),
+                    inout.launch(),
+                    inout.spinUp(),
+                    inout.launch(),
+                    originTAB.fresh()
+                        .strafeToConstantHeading(Vector2d(-63.0, -48.0)).build(),
+                )
             }
-
-            if (importantTag == null) {
-                // Panic case
-            } else if(importantTag.fiducialId == 12) {
-                // Do something based off the tag
-            } else if(importantTag.fiducialId == 15) {
-                // Do something different with the information
-            }
+            else -> { return }
         }
 
-        val path = roadrunnerDrive.actionBuilder(startPose)
-            .strafeTo(Vector2d(-6.0, -30.5))
-            .build()
-
-        tel.addData("INIT STATUS", "READY")
-        tel.update()
+        telemetry.addData("INIT STATUS", "READY")
+        telemetry.update()
 
         waitForStart() // setup done actually do things
 
-        when(currentLocation) {
-            Locations.BlueFar,
-            Locations.BlueClose -> {
-                runBlocking(SequentialAction(
-                    path
-                ))
-            }
-            Locations.RedFar,
-            Locations.RedClose -> {
-                runBlocking(SequentialAction(
-                    path
-                ))
-            }
-            else -> {}
-        }
+        runBlocking(route)
+
         blackboard.put("robotHeading", roadrunnerDrive.localizer.pose.heading.toDouble())
     }
 
-    protected enum class Locations(val teamColor: TeamColor) {
-        BlueClose(TeamColor.BLUE),
-        BlueFar(TeamColor.BLUE),
-        RedClose(TeamColor.RED),
-        RedFar(TeamColor.RED),
-        Unknown(TeamColor.UNKNOWN)
+    protected enum class Locations(val teamColor: TeamColor, val startPose: Pose2d) {
+        BlueClose(TeamColor.BLUE, Pose2d(55.0, 56.0, 3 * -PI / 4)),
+        BlueFar(TeamColor.BLUE, Pose2d(-66.0, 24.0, -PI)),
+        RedClose(TeamColor.RED, Pose2d(55.0, -56.0, 3 * PI / 4)),
+        RedFar(TeamColor.RED, Pose2d(-66.0, -24.0, -PI)),
+        Unknown(TeamColor.UNKNOWN, Pose2d(0.0, 0.0, 0.0))
     }
 
     protected enum class Path {
@@ -118,10 +140,10 @@ class BlueFarAutonomousKt : UnifiedAutonomousKt() {
 
 @Autonomous(name = "Red Close Autonomous", group = "Competition")
 class RedCloseAutonomousKt : UnifiedAutonomousKt() {
-    override val currentLocation = Locations.RedClose
+    override val currentLocation = Locations.RedFar
 }
 
 @Autonomous(name = "Red Far Autonomous", group = "Competition")
 class RedFarAutonomousKt : UnifiedAutonomousKt() {
-    override val currentLocation = Locations.RedFar
+    override val currentLocation = Locations.RedClose
 }
