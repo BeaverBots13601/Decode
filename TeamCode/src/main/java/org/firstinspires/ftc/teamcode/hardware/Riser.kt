@@ -1,33 +1,35 @@
 package org.firstinspires.ftc.teamcode.hardware
 
-import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcore.external.Telemetry
 
 class Riser(hardwareMap: HardwareMap, initData: InitData, private val telemetry: Telemetry) : HardwareMechanismKt() {
-    val leftRiserMotor = hardwareMap.dcMotor.get("LeftRiserMotor")
-    val rightRiserMotor = hardwareMap.dcMotor.get("RightRiserMotor")
+    val leftRiserMotor = createDefaultMotor(hardwareMap, "leftRiserMotor")
+    val rightRiserMotor = createDefaultMotor(hardwareMap, "RightRiserMotor")
 
-    override fun start() {
-        leftRiserMotor.power = 0.0
-        rightRiserMotor.power = 0.0
-
-        rightRiserMotor.direction = DcMotorSimple.Direction.REVERSE
-    }
+    override fun start() {}
 
     override fun run(data: RunData) {
-        leftRiserMotor.power = 1.0
-        rightRiserMotor.power = 1.0
+        if (data.currentGamepadOne.right_bumper) {
+            leftRiserMotor.power = 0.5
+            rightRiserMotor.power = 0.5
+        } else if (data.currentGamepadOne.left_bumper) {
+            leftRiserMotor.power = -0.5
+            rightRiserMotor.power = -0.5
+        } else {
+            leftRiserMotor.power = 0.0
+            rightRiserMotor.power = 0.0
+        }
     }
 
-    override fun stop() {
-        leftRiserMotor.power = 0.0
-        rightRiserMotor.power = 0.0
-    }
+    override fun stop() {}
 
-    override val usedButtons: Array<GamepadButtons> = emptyArray()
+    override val usedButtons: Array<GamepadButtons> = arrayOf(
+        GamepadButtons.GP1_RIGHT_BUMPER,
+        GamepadButtons.GP1_LEFT_BUMPER,
+    )
 
     companion object : HardwareMechanismSingletonManager<Riser>(::Riser)
 }
