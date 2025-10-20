@@ -13,11 +13,11 @@ class Riser(hardwareMap: HardwareMap, initData: InitData, private val telemetry:
 
     override fun run(data: RunData) {
         if (data.currentGamepadOne.right_bumper) {
-            leftRiserMotor.power = 0.5
-            rightRiserMotor.power = 0.5
-        } else if (data.currentGamepadOne.left_bumper) {
             leftRiserMotor.power = -0.5
             rightRiserMotor.power = -0.5
+        } else if (data.currentGamepadOne.left_bumper) {
+            leftRiserMotor.power = 0.5
+            rightRiserMotor.power = 0.5
         } else {
             leftRiserMotor.power = 0.0
             rightRiserMotor.power = 0.0
