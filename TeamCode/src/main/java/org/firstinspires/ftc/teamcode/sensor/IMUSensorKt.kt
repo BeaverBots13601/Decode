@@ -15,7 +15,7 @@ class IMUSensorKt private constructor(hardwareMap: HardwareMap, initData: Sensor
     init {
         val imuParameters = BNO055IMUNew.Parameters(RevHubOrientationOnRobot(
             RevHubOrientationOnRobot.LogoFacingDirection.UP,
-            RevHubOrientationOnRobot.UsbFacingDirection.LEFT
+            RevHubOrientationOnRobot.UsbFacingDirection.RIGHT
         ))
         val worked = imu.initialize(imuParameters)
         telemetry.addData("IMU Initialized Goodly?", worked)
