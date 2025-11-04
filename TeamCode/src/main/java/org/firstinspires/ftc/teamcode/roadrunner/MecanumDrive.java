@@ -41,6 +41,7 @@ import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import org.firstinspires.ftc.teamcode.misc.DriveMotors;
 import org.firstinspires.ftc.teamcode.roadrunner.messages.DriveCommandMessage;
 import org.firstinspires.ftc.teamcode.roadrunner.messages.MecanumCommandMessage;
 import org.firstinspires.ftc.teamcode.roadrunner.messages.MecanumLocalizerInputsMessage;
@@ -233,8 +234,10 @@ public final class MecanumDrive {
         rightBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
-        rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftFront.setDirection(DriveMotors.leftFront.getDirection());
+        leftBack.setDirection(DriveMotors.leftBack.getDirection());
+        rightFront.setDirection(DriveMotors.rightFront.getDirection());
+        rightBack.setDirection(DriveMotors.rightBack.getDirection());
 
         lazyImu = new LazyHardwareMapImu(hardwareMap, "imu", new RevHubOrientationOnRobot(
                 PARAMS.logoFacingDirection, PARAMS.usbFacingDirection));

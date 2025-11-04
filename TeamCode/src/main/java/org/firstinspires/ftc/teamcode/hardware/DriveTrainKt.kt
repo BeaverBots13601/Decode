@@ -12,6 +12,7 @@ import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
 import org.firstinspires.ftc.robotcore.external.Telemetry
+import org.firstinspires.ftc.teamcode.misc.DriveMotors
 import org.firstinspires.ftc.teamcode.misc.PoseKt
 import org.firstinspires.ftc.teamcode.roadrunner.MecanumDrive
 import org.firstinspires.ftc.teamcode.sensor.LimelightKt
@@ -20,7 +21,9 @@ import kotlin.math.abs
 import kotlin.math.max
 
 /**
- * Responsible for managing our four-wheel Mecanum drive. Includes 3 levels of variable speed.
+ * Responsible for managing our four-wheel Mecanum drive during TeleOp. Includes 3 levels of variable speed, as well as both a field-centric and robot-centric movement mode.
+ *
+ * Uses an optional [DigitalChannel] named 'switch' for dynamically switching between Robot and Field mode. When not configured, uses the mode of the selected OpMode.
  */
 @Config
 class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData, private val telemetry: Telemetry) : HardwareMechanismKt() {
@@ -82,17 +85,22 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         val switchState = getSwitchState()
         if (switchState != null && switchState) { // if no switch is attached, do nothing
             orientationMode = DriveMode.ROBOT
-        } else if (switchState != null && !switchState) {
+        } else if (switchState != null) {
             orientationMode = DriveMode.FIELD
         }
 
         val speedNow = currentSpeedMode.speed
 
-        val tmp_deadzoneadjust = 2
+        // Make the joystick more sensitive at powers below what gets capped by maxPower
+        // i.e.: stickX =  0.25 -> 0.50 / 1.0 -> forward @ 0.50
+        // i.e w/o factor: 0.25 -> 0.25 / 1.0 -> forward @ 0.25
+        // i.e.: stickX =  0.75 -> 1.50 / 1.5 -> forward @ 1.00
+        // i.e w/o factor: 0.75 -> 0.75 / 1.0 -> forward @ 0.75
+        val deadZoneAdjust = 2
 
-        val stickX = (data.currentGamepadOne.left_stick_x * tmp_deadzoneadjust).toDouble()
-        val stickY = -(data.currentGamepadOne.left_stick_y * tmp_deadzoneadjust).toDouble()
-        val stickRotation = (data.currentGamepadOne.right_stick_x * tmp_deadzoneadjust).toDouble()
+        val stickX = (data.currentGamepadOne.left_stick_x * deadZoneAdjust).toDouble()
+        val stickY = -(data.currentGamepadOne.left_stick_y * deadZoneAdjust).toDouble()
+        val stickRotation = (data.currentGamepadOne.right_stick_x * deadZoneAdjust).toDouble()
 
         telemetry.addData("Current Orientation Mode", orientationMode)
         val directionRotation: Double = if (orientationMode == DriveMode.FIELD) {
@@ -149,10 +157,6 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         GamepadButtons.GP1_PS,
     )
 
-    private enum class DriveMotorName { // expecting to be same for forseeable future
-        leftFront, leftBack, rightFront, rightBack
-    }
-
     private enum class SPEEDS(val speed: Double) {
         NORMAL(0.65),
         FAST(0.80),
@@ -162,34 +166,31 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
 
     private fun createDriveMotors(hardwareMap: HardwareMap): Array<DcMotorEx> {
         var out = emptyArray<DcMotorEx>()
-        for (driveMotorName in DriveMotorName.entries) {
+        for (driveMotorName in DriveMotors.entries) {
             val driveMotor = createDefaultMotor(hardwareMap, driveMotorName.name)
-            if (driveMotorName == DriveMotorName.leftBack) {
-                driveMotor.direction = DcMotorSimple.Direction.FORWARD
-            }
-            if (driveMotorName == DriveMotorName.rightBack) {
-                driveMotor.direction = DcMotorSimple.Direction.REVERSE
-            }
             driveMotor.mode = RunMode.RUN_USING_ENCODER
+            driveMotor.direction = driveMotorName.direction
             out = out.plus(driveMotor)
         }
         return out
     }
 
     fun setDriveMotors(powers: Array<Double>, mode: RunMode) {
-        for (driveMotorName in DriveMotorName.entries){
+        for (driveMotorName in DriveMotors.entries){
             driveMotors[driveMotorName.ordinal].mode = mode
             driveMotors[driveMotorName.ordinal].power = powers[driveMotorName.ordinal]
         }
     }
 
     /**
-     * @return The switch's state. Returns null if a switch is not attached (or not configured)
+     * @return The switch's state. Returns null if a switch is not configured
      */
     fun getSwitchState(): Boolean? { return switch?.state }
 
     companion object : HardwareMechanismSingletonManager<DriveTrainKt>(::DriveTrainKt) {
-        // This speed is designed to be set dynamically within FTC Dashboard.
+        /**
+         * This speed is designed to be set dynamically within FTC Dashboard.
+         */
         @JvmField var CUSTOM_FTC_DASHBOARD_SPEED = 0.65
     }
 }
