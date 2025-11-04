@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.opModes
 
 import com.acmerobotics.dashboard.FtcDashboard
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry
+import com.bylazar.telemetry.PanelsTelemetry
 import com.qualcomm.hardware.lynx.LynxModule
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
@@ -39,7 +40,7 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
     override fun runOpMode() {
         initBulkReads(hardwareMap)
 
-        val telemetry = MultipleTelemetry(this.telemetry, FtcDashboard.getInstance().telemetry)
+        val telemetry = MultipleTelemetry(this.telemetry, FtcDashboard.getInstance().telemetry, PanelsTelemetry.ftcTelemetry)
         val imu = IMUSensorKt.getInstance(
             hardwareMap,
             SensorDeviceKt.SensorInitData(teamColor, FtcDashboard.getInstance().isEnabled),
