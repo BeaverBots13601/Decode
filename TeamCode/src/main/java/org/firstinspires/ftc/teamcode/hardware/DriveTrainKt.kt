@@ -9,6 +9,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcore.external.Telemetry
+import org.firstinspires.ftc.teamcode.misc.DriveMotors
 import org.firstinspires.ftc.teamcode.misc.PoseKt
 import kotlin.math.abs
 import kotlin.math.max
@@ -105,15 +106,6 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         GamepadButtons.GP1_DPAD_DOWN,
     )
 
-    @Suppress("EnumEntryName") // Reason: Enum names map to hardware map config, where
-    // convention is camelCase instead of PascalCase
-    private enum class DriveMotorName(val direction: DcMotorSimple.Direction) { // Expected to be same for foreseeable future
-        leftFront(DcMotorSimple.Direction.REVERSE),
-        leftBack(DcMotorSimple.Direction.REVERSE),
-        rightFront(DcMotorSimple.Direction.FORWARD),
-        rightBack(DcMotorSimple.Direction.FORWARD),
-    }
-
     private enum class SPEEDS(val speed: Double) {
         NORMAL(0.65),
         FAST(0.80),
@@ -123,7 +115,7 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
 
     private fun createDriveMotors(hardwareMap: HardwareMap): Array<DcMotorEx> {
         var out = emptyArray<DcMotorEx>()
-        for (driveMotorName in DriveMotorName.entries) {
+        for (driveMotorName in DriveMotors.entries) {
             val driveMotor = createDefaultMotor(hardwareMap, driveMotorName.name)
             driveMotor.mode = RunMode.RUN_USING_ENCODER
             driveMotor.direction = driveMotorName.direction
@@ -133,7 +125,7 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
     }
 
     fun setDriveMotors(powers: Array<Double>, mode: RunMode) {
-        for (driveMotorName in DriveMotorName.entries){
+        for (driveMotorName in DriveMotors.entries){
             driveMotors[driveMotorName.ordinal].mode = mode
             driveMotors[driveMotorName.ordinal].power = powers[driveMotorName.ordinal]
         }

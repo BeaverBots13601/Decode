@@ -11,6 +11,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.misc.DriveMotors;
 
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
@@ -24,10 +25,10 @@ public class Constants {
             .rightRearMotorName("rightBack")
             .leftRearMotorName("leftBack")
             .leftFrontMotorName("leftFront")
-            .leftFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
-            .leftRearMotorDirection(DcMotorSimple.Direction.FORWARD)
-            .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
-            .rightRearMotorDirection(DcMotorSimple.Direction.REVERSE);
+            .leftFrontMotorDirection(DriveMotors.leftFront.getDirection())
+            .leftRearMotorDirection(DriveMotors.leftBack.getDirection())
+            .rightFrontMotorDirection(DriveMotors.rightFront.getDirection())
+            .rightRearMotorDirection(DriveMotors.rightBack.getDirection());
 
     public static PinpointConstants localizerConstants = new PinpointConstants()
             .forwardPodY(1.0) // todo: tune your pod placements in inches (see docs for diagram)
