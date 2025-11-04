@@ -14,9 +14,7 @@ import kotlin.math.abs
 import kotlin.math.max
 
 /**
- * Responsible for managing our four-wheel Mecanum drive during TeleOp. Includes 3 levels of variable speed, as well as both a field-centric and robot-centric movement mode.
- *
- * Uses an optional [DigitalChannel] named 'switch' for dynamically switching between Robot and Field mode. When not configured, uses the mode of the selected OpMode.
+ * Responsible for managing our four-wheel Mecanum drive. Includes 3 levels of variable speed.
  */
 @Config
 class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData, private val telemetry: Telemetry) : HardwareMechanismKt() {
@@ -34,22 +32,17 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         val switchState = getSwitchState()
         if (switchState != null && switchState) { // if no switch is attached, do nothing
             orientationMode = DriveMode.ROBOT
-        } else if (switchState != null) {
+        } else if (switchState != null && !switchState) {
             orientationMode = DriveMode.FIELD
         }
 
         val speedNow = currentSpeedMode.speed
 
-        // Make the joystick more sensitive at powers below what gets capped by maxPower
-        // i.e.: stickX =  0.25 -> 0.50 / 1.0 -> forward @ 0.50
-        // i.e w/o factor: 0.25 -> 0.25 / 1.0 -> forward @ 0.25
-        // i.e.: stickX =  0.75 -> 1.50 / 1.5 -> forward @ 1.00
-        // i.e w/o factor: 0.75 -> 0.75 / 1.0 -> forward @ 0.75
-        val deadZoneAdjust = 2
+        val tmp_deadzoneadjust = 2
 
-        val stickX = (data.currentGamepadOne.left_stick_x * deadZoneAdjust).toDouble()
-        val stickY = -(data.currentGamepadOne.left_stick_y * deadZoneAdjust).toDouble()
-        val stickRotation = (data.currentGamepadOne.right_stick_x * deadZoneAdjust).toDouble()
+        val stickX = (data.currentGamepadOne.left_stick_x * tmp_deadzoneadjust).toDouble()
+        val stickY = -(data.currentGamepadOne.left_stick_y * tmp_deadzoneadjust).toDouble()
+        val stickRotation = (data.currentGamepadOne.right_stick_x * tmp_deadzoneadjust).toDouble()
 
         telemetry.addData("Current Orientation Mode", orientationMode)
         val directionRotation: Double = if (orientationMode == DriveMode.FIELD) {
@@ -80,16 +73,16 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         setDriveMotors(arrayOf(leftFrontPower, leftBackPower, rightFrontPower, rightBackPower), RunMode.RUN_USING_ENCODER)
 
         // speed controls (gp1)
-        if (data.currentGamepadOne.dpadUpWasPressed()){
+        if (data.currentGamepadOne.dpadRightWasPressed()){
             currentSpeedMode = SPEEDS.FAST
         }
-        if (data.currentGamepadOne.dpadRightWasPressed()){
+        if (data.currentGamepadOne.dpadUpWasPressed()){
             currentSpeedMode = SPEEDS.NORMAL
         }
-        if (data.currentGamepadOne.dpadDownWasPressed()){
+        if (data.currentGamepadOne.dpadLeftWasPressed()){
             currentSpeedMode = SPEEDS.SLOW
         }
-        if (data.currentGamepadOne.dpadLeftWasPressed() && dashboardEnabled){
+        if (data.currentGamepadOne.dpadDownWasPressed() && dashboardEnabled){
             currentSpeedMode = SPEEDS.CUSTOM_FTC_DASHBOARD
         }
     }
@@ -105,13 +98,8 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         GamepadButtons.GP1_DPAD_DOWN,
     )
 
-    @Suppress("EnumEntryName") // Reason: Enum names map to hardware map config, where
-    // convention is camelCase instead of PascalCase
-    private enum class DriveMotorName(val direction: DcMotorSimple.Direction) { // Expected to be same for foreseeable future
-        leftFront(DcMotorSimple.Direction.REVERSE),
-        leftBack(DcMotorSimple.Direction.REVERSE),
-        rightFront(DcMotorSimple.Direction.FORWARD),
-        rightBack(DcMotorSimple.Direction.FORWARD),
+    private enum class DriveMotorName { // expecting to be same for forseeable future
+        leftFront, leftBack, rightFront, rightBack
     }
 
     private enum class SPEEDS(val speed: Double) {
@@ -125,8 +113,13 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         var out = emptyArray<DcMotorEx>()
         for (driveMotorName in DriveMotorName.entries) {
             val driveMotor = createDefaultMotor(hardwareMap, driveMotorName.name)
+            if (driveMotorName == DriveMotorName.leftBack) {
+                driveMotor.direction = DcMotorSimple.Direction.FORWARD
+            }
+            if (driveMotorName == DriveMotorName.rightBack) {
+                driveMotor.direction = DcMotorSimple.Direction.REVERSE
+            }
             driveMotor.mode = RunMode.RUN_USING_ENCODER
-            driveMotor.direction = driveMotorName.direction
             out = out.plus(driveMotor)
         }
         return out
@@ -140,14 +133,12 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
     }
 
     /**
-     * @return The switch's state. Returns null if a switch is not configured
+     * @return The switch's state. Returns null if a switch is not attached (or not configured)
      */
     fun getSwitchState(): Boolean? { return switch?.state }
 
     companion object : HardwareMechanismSingletonManager<DriveTrainKt>(::DriveTrainKt) {
-        /**
-         * This speed is designed to be set dynamically within FTC Dashboard.
-         */
+        // This speed is designed to be set dynamically within FTC Dashboard.
         @JvmField var CUSTOM_FTC_DASHBOARD_SPEED = 0.65
     }
 }
