@@ -20,21 +20,21 @@ class ServoCalibrationOpMode : LinearOpMode() {
         telemetry = MultipleTelemetry(telemetry, FtcDashboard.getInstance().telemetry)
         val servo = hardwareMap.servo.get(SERVO_NAME)
         servo.direction = Servo.Direction.REVERSE
-        val servo2 = hardwareMap.servo.get(SERVO_NAME_2)
+        //val servo2 = hardwareMap.servo.get(SERVO_NAME_2)
         servo.position = 0.5
-        servo2.position = 0.5
+        //servo2.position = 0.5
         waitForStart()
         while (opModeIsActive()){
             if (gamepad1.left_bumper) {
                 servo.position += 0.01
-                servo2.position += 0.01
+                //servo2.position += 0.01
             }
             if (gamepad1.right_bumper) {
                 servo.position -= 0.01
-                servo2.position -= 0.01
+                //servo2.position -= 0.01
             }
             telemetry.addData("Servo Position", servo.position)
-            telemetry.addData("Servo 2 Position", servo.position)
+            //telemetry.addData("Servo 2 Position", servo2.position)
             telemetry.update()
             sleep(50)
         }

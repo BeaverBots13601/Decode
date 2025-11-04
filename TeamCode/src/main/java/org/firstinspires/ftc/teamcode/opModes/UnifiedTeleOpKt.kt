@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.opModes
 
-import android.os.Trace
 import com.acmerobotics.dashboard.FtcDashboard
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry
 import com.qualcomm.hardware.lynx.LynxModule
@@ -9,7 +8,6 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 import com.qualcomm.robotcore.hardware.Gamepad
 import com.qualcomm.robotcore.hardware.HardwareMap
 import com.qualcomm.robotcore.util.ElapsedTime
-import com.qualcomm.robotcore.util.RobotLog
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismClassManagerKt
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
@@ -21,7 +19,6 @@ import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
 import kotlin.reflect.full.companionObjectInstance
 
 /*
-    TODO: Build web-tool that allows robot configuration i.e driver station (ftc-dash)
     TODO: Add a modification to ftc-dash allowing multiple camera sources.
  */
 
@@ -60,6 +57,7 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
         val classes = HardwareMechanismClassManagerKt.getMechanisms()
         val buttons: HashSet<GamepadButtons> = hashSetOf()
         for (clazz in classes){
+            telemetry.addData(clazz.simpleName + " Loaded", false)
             // Instantiate each
             val mech = (clazz.companionObjectInstance as HardwareMechanismSingletonManager<*>)
                 .getInstance(hardwareMap, initData, telemetry) ?: continue
@@ -72,11 +70,13 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
             }
             // If all is well, add the mechanism to our list
             mechanisms.add(mech)
+            telemetry.addData(clazz.simpleName + " Loaded", true)
         }
 
         telemetry.update()
 
         waitForStart()
+        telemetry.clear()
         for (mechanism in mechanisms) mechanism.start()
         imu.start()
 
@@ -94,7 +94,7 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
             val runData = HardwareMechanismKt.RunData(
                 currentGamepadOne,
                 currentGamepadTwo,
-                imuAngleRad = 0.0
+                imuAngleRad = 0.0 // moderately safe hack to reduce cycle times
                 // how roadrunner stop so fast in manual ff tune??
             )
 
