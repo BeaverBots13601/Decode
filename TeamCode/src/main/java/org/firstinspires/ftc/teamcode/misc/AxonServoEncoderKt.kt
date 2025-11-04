@@ -58,9 +58,7 @@ class AxonServoEncoderKt(private val channel: AnalogInput) {
             pos += trueDelta
             normalizedPosLastCycle = currentNormalizedPosition
 
-            try {
-                Thread.sleep(50)
-            } catch (ignored: InterruptedException) {}
+            runCatching { Thread.sleep(50) }
         }
     }.apply { start() }
 
