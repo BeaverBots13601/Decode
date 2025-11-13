@@ -14,13 +14,13 @@ class PIDVelocityTuner : LinearOpMode() {
     override fun runOpMode() {
         val telemetry = MultipleTelemetry(telemetry, FtcDashboard.getInstance().telemetry)
         val a = PIDVelocityController(
-            hardwareMap.get(DcMotorEx::class.java, "leftMotor"),
+            hardwareMap.get(DcMotorEx::class.java, "leftFlywheel"),
             0.0175,
             0.000002,
             0.00001,
             telemetry,
         )
-        val b = hardwareMap.get(DcMotorEx::class.java, "rightMotor")
+        val b = hardwareMap.get(DcMotorEx::class.java, "rightFlywheel")
         b.mode = DcMotor.RunMode.RUN_USING_ENCODER
 
         waitForStart()

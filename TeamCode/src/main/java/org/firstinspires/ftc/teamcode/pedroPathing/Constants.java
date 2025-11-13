@@ -15,7 +15,7 @@ import org.firstinspires.ftc.teamcode.misc.DriveMotors;
 
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .mass(5); // todo: add mass in kg
+            .mass(11.52125); // 25.4lb in kg
 
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 

@@ -17,10 +17,10 @@ class IntakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData,
 
     override fun run(data: RunData) {
         if (data.currentGamepadTwo.squareWasPressed()) {
-            if (intakeMotor.power == 1.0) {
+            if (intakeMotor.power == 0.7) {
                 intakeMotor.power = 0.0
             } else {
-                intakeMotor.power = 1.0
+                intakeMotor.power = 0.7
             }
         }
     }

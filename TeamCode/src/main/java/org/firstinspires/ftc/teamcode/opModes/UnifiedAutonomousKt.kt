@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.opModes
 
 import com.acmerobotics.dashboard.FtcDashboard
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry
-import com.acmerobotics.roadrunner.InstantAction
 import com.acmerobotics.roadrunner.Pose2d
 import com.acmerobotics.roadrunner.SequentialAction
 import com.acmerobotics.roadrunner.SleepAction
@@ -13,7 +12,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
-import org.firstinspires.ftc.teamcode.hardware.InOuttake
+import org.firstinspires.ftc.teamcode.hardware.OuttakeV2
 import org.firstinspires.ftc.teamcode.roadrunner.MecanumDrive
 import kotlin.math.PI
 
@@ -33,14 +32,14 @@ open class UnifiedAutonomousKt : LinearOpMode() {
     private val roadrunnerDrive by lazy { MecanumDrive(hardwareMap, currentLocation.startPose) }
 
     override fun runOpMode() {
-        val inout = InOuttake.getInstance(hardwareMap, HardwareMechanismKt.InitData(
+        val out = OuttakeV2.getInstance(hardwareMap, HardwareMechanismKt.InitData(
             currentLocation.teamColor,
             HardwareMechanismKt.DriveMode.ROBOT,
             FtcDashboard.getInstance().isEnabled,
             currentLocation.startPose.heading.real, // todo needs conversion?
         ), telemetry)
 
-        if (inout == null) throw Error("Inout Initialization Failed")
+        if (out == null) throw Error("out Initialization Failed")
         initBulkReads(hardwareMap)
         blackboard.remove("robotHeading")
 
@@ -52,11 +51,10 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 SequentialAction(
                     originTAB.fresh() // back up
                         .strafeToLinearHeading(Vector2d(-63.0, 22.0), (-23 * PI) / 24).build(),
-                    inout.compositionLaunchUsingScoop(InOuttake.OuttakeSpeeds.FAR_AUTO),
-                    InstantAction { inout.setIntakeServoPower(0.25) },
-                    SleepAction(3.0),
-                    InstantAction { inout.setIntakeServoPower(0.0) },
-                    inout.compositionLaunchUsingScoop(InOuttake.OuttakeSpeeds.FAR_AUTO),
+                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.FAR_AUTO),
+                    out.compositionLaunch(OuttakeV2.Side.RIGHT, OuttakeV2.LaunchDistance.FAR_AUTO),
+                    out.moveLowerArtifactTo(OuttakeV2.Side.LEFT),
+                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.FAR_AUTO),
                     SleepAction(2.5),
                     originTAB.fresh() // park
                         .strafeToLinearHeading(Vector2d(-63.0, 36.0), -PI).build(),
@@ -66,11 +64,10 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 SequentialAction(
                     originTAB.fresh() // back up
                         .strafeToLinearHeading(Vector2d(-63.0, -22.0), (22 * PI) / 24).build(),
-                    inout.compositionLaunchUsingScoop(InOuttake.OuttakeSpeeds.FAR_AUTO),
-                    InstantAction { inout.setIntakeServoPower(0.25) },
-                    SleepAction(3.0),
-                    InstantAction { inout.setIntakeServoPower(0.0) },
-                    inout.compositionLaunchUsingScoop(InOuttake.OuttakeSpeeds.FAR_AUTO),
+                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.FAR_AUTO),
+                    out.compositionLaunch(OuttakeV2.Side.RIGHT, OuttakeV2.LaunchDistance.FAR_AUTO),
+                    out.moveLowerArtifactTo(OuttakeV2.Side.LEFT),
+                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.FAR_AUTO),
                     SleepAction(2.5),
                     originTAB.fresh() // park
                         .strafeToLinearHeading(Vector2d(-63.0, -36.0), -PI).build(),
@@ -80,11 +77,10 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 SequentialAction(
                     originTAB.fresh()
                         .strafeToLinearHeading(Vector2d(16.0, 25.0), 13 * -PI / 16).build(),
-                    inout.compositionLaunchUsingScoop(InOuttake.OuttakeSpeeds.NEAR_AUTO),
-                    InstantAction { inout.setIntakeServoPower(0.25) },
-                    SleepAction(3.0),
-                    InstantAction { inout.setIntakeServoPower(0.0) },
-                    inout.compositionLaunchUsingScoop(InOuttake.OuttakeSpeeds.NEAR_AUTO),
+                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.CLOSE_AUTO),
+                    out.compositionLaunch(OuttakeV2.Side.RIGHT, OuttakeV2.LaunchDistance.CLOSE_AUTO),
+                    out.moveLowerArtifactTo(OuttakeV2.Side.LEFT),
+                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.CLOSE_AUTO),
                     SleepAction(2.5),
                     originTAB.fresh()
                         .strafeToLinearHeading(Vector2d(66.0, 24.0), -PI).build(),
@@ -95,11 +91,10 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 SequentialAction(
                     originTAB.fresh()
                         .strafeToLinearHeading(Vector2d(16.0, -25.0), 12 * PI / 16).build(),
-                    inout.compositionLaunchUsingScoop(InOuttake.OuttakeSpeeds.NEAR_AUTO),
-                    InstantAction { inout.setIntakeServoPower(0.25) },
-                    SleepAction(3.0),
-                    InstantAction { inout.setIntakeServoPower(0.0) },
-                    inout.compositionLaunchUsingScoop(InOuttake.OuttakeSpeeds.NEAR_AUTO),
+                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.CLOSE_AUTO),
+                    out.compositionLaunch(OuttakeV2.Side.RIGHT, OuttakeV2.LaunchDistance.CLOSE_AUTO),
+                    out.moveLowerArtifactTo(OuttakeV2.Side.LEFT),
+                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.CLOSE_AUTO),
                     SleepAction(2.5),
                     originTAB.fresh()
                         .strafeToLinearHeading(Vector2d(66.0, -24.0), -PI).build(),
@@ -117,9 +112,9 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
         runBlocking(route)
 
-        inout.stop()
+        out.stop()
 
-        blackboard.put("robotHeading", roadrunnerDrive.localizer.pose.heading.toDouble())
+        blackboard["robotHeading"] = roadrunnerDrive.localizer.pose.heading.toDouble()
     }
 
     protected enum class Locations(val teamColor: TeamColor, val startPose: Pose2d) {

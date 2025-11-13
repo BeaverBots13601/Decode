@@ -1,11 +1,11 @@
 package org.firstinspires.ftc.teamcode.hardware
 
+import com.acmerobotics.dashboard.FtcDashboard
 import com.acmerobotics.dashboard.config.Config
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket
 import com.acmerobotics.roadrunner.Pose2d
 import com.qualcomm.robotcore.hardware.DcMotor.RunMode
 import com.qualcomm.robotcore.hardware.DcMotorEx
-import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.DigitalChannel
 import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
@@ -62,7 +62,8 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
                     it.fiducialId == 20
                 }
             }?.targetPoseCameraSpace) ?: return // return if not valid or found
-            val currentPose = roadrunnerDrive.localizer.pose
+            //val currentPose = roadrunnerDrive.localizer.pose
+            val currentPose = Pose2d(0.0, 0.0, 0.0)
 
             // 1m = 39.37 inches
             // -z on the ll is +x in roadrunner
@@ -72,15 +73,21 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
                 (39.37 * relativePose.position.x) + currentPose.position.y,
                 -Math.toRadians(relativePose.orientation.yaw) + currentPose.heading.real)
 
-            val finalAction = roadrunnerDrive.actionBuilder(roadrunnerDrive.localizer.pose)
+            telemetry.addData("Current Pose", calculatedPose)
+
+            val finalAction = roadrunnerDrive.actionBuilder(currentPose)
+//            val finalAction = roadrunnerDrive.actionBuilder(roadrunnerDrive.localizer.pose)
                 .strafeToLinearHeading(calculatedPose.position, calculatedPose.heading)
                 .build()
 
             // todo should we reuse these actions for a few cycles to save on cycle times?
-            finalAction.run(TelemetryPacket())
+            val packet = TelemetryPacket()
+            finalAction.run(packet)
+            FtcDashboard.getInstance().sendTelemetryPacket(packet)
 
             return
         }
+
 
         val switchState = getSwitchState()
         if (switchState != null && switchState) { // if no switch is attached, do nothing
