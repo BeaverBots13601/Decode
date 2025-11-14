@@ -14,7 +14,6 @@
 
             <!-- I2C -->
             <goBILDAPinpoint name="pinpoint" port="1" bus="0" />
-            <RevColorSensorV3 name="rightColorSensor" port="0" bus="1" />
 
             <!-- LED -->
             <Servo name="rightIndicatorLED" port="2" />
@@ -35,7 +34,6 @@
             <ContinuousRotationServo name="leftAngleServo" port="0" />
 
             <!-- I2C -->
-            <RevColorSensorV3 name="leftColorSensor" port="0" bus="0" />
             <RevColorSensorV3 name="lowerColorSensor" port="0" bus="2" />
 
             <!-- LED -->
