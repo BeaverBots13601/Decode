@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.opModes
 
 import com.acmerobotics.dashboard.FtcDashboard
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry
+import com.acmerobotics.roadrunner.ParallelAction
 import com.acmerobotics.roadrunner.Pose2d
 import com.acmerobotics.roadrunner.SequentialAction
 import com.acmerobotics.roadrunner.SleepAction
@@ -13,15 +14,15 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
 import org.firstinspires.ftc.teamcode.hardware.OuttakeV2
+import org.firstinspires.ftc.teamcode.hardware.OuttakeV2.Motif
 import org.firstinspires.ftc.teamcode.roadrunner.MecanumDrive
+import org.firstinspires.ftc.teamcode.sensor.LimelightKt
+import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
 import kotlin.math.PI
 
 @Autonomous(name="Automatic Autonomous", group="Competition")
 @Disabled
 open class UnifiedAutonomousKt : LinearOpMode() {
-    //private val propLocation: WebcamPropIdentificationKt.PropLocation
-    //private val propId: WebcamPropIdentificationKt
-
     // Subclass variables
     protected open val pathToFollow = Path.Standard
     protected open val currentLocation = Locations.Unknown
@@ -30,6 +31,10 @@ open class UnifiedAutonomousKt : LinearOpMode() {
     @Suppress("PROPERTY_HIDES_JAVA_FIELD") // intentional
     private val telemetry = MultipleTelemetry(super.telemetry, FtcDashboard.getInstance().telemetry)
     private val roadrunnerDrive by lazy { MecanumDrive(hardwareMap, currentLocation.startPose) }
+    private val limelight by lazy { LimelightKt.getInstance(hardwareMap, SensorDeviceKt.SensorInitData(
+        currentLocation.teamColor,
+        FtcDashboard.getInstance().isEnabled
+    ), telemetry) }
 
     override fun runOpMode() {
         val out = OuttakeV2.getInstance(hardwareMap, HardwareMechanismKt.InitData(
@@ -38,36 +43,111 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             FtcDashboard.getInstance().isEnabled,
             currentLocation.startPose.heading.real, // todo needs conversion?
         ), telemetry)
-
         if (out == null) throw Error("out Initialization Failed")
+
+        out.loadAutoArtifacts()
+
         initBulkReads(hardwareMap)
         blackboard.remove("robotHeading")
+
+        val motif = limelight?.getAprilTags()?.first {
+            it.id == 23 || it.id ==
+        } ?: Motif.GREEN_PURPLE_PURPLE
 
         val originTAB = roadrunnerDrive.actionBuilder(currentLocation.startPose)
 
         // todo smartly rotate poses well instead of duplicating
         val route: SequentialAction = when(currentLocation) {
             Locations.BlueFar -> { // canonical far
+                val toLaunch = originTAB.fresh() // back up
+                    .strafeToLinearHeading(Vector2d(63.0, 22.0), (-23 * PI) / 24)
+                val firstArtifact = toLaunch.fresh()
+                    .strafeToLinearHeading(Vector2d(36.0, 36.0), -PI / 2)
+                val secondArtifact = firstArtifact.fresh()
+                    .strafeToLinearHeading(Vector2d(36.0, 38.0), -PI / 2)
+                val thirdArtifact = secondArtifact.fresh()
+                    .strafeToLinearHeading(Vector2d(36.0, 40.0), -PI / 2)
+                val toLaunchTwo = thirdArtifact.fresh()
+                    .strafeToLinearHeading(Vector2d(63.0, 22.0), (-23 * PI) / 24)
+                val fourArtifact = toLaunchTwo.fresh()
+                    .strafeToLinearHeading(Vector2d(12.0, 36.0), -PI / 2)
+                val fiveArtifact = fourArtifact.fresh()
+                    .strafeToLinearHeading(Vector2d(12.0, 38.0), -PI / 2)
+                val sixArtifact = fiveArtifact.fresh()
+                    .strafeToLinearHeading(Vector2d(12.0, 40.0), -PI / 2)
+                val toLaunchThree = sixArtifact.fresh()
+                    .strafeToLinearHeading(Vector2d(63.0, 22.0), (-23 * PI) / 24)
+                val sevenArtifact = toLaunchThree.fresh()
+                    .strafeToLinearHeading(Vector2d(-12.0, 36.0), -PI / 2)
+                val eightArtifact = sevenArtifact.fresh()
+                    .strafeToLinearHeading(Vector2d(-12.0, 38.0), -PI / 2)
+                val nineArtifact = eightArtifact.fresh()
+                    .strafeToLinearHeading(Vector2d(-12.0, 40.0), -PI / 2)
+                val toLaunchFour = nineArtifact.fresh()
+                    .strafeToLinearHeading(Vector2d(63.0, 22.0), (-23 * PI) / 24)
+                val toPark = toLaunchFour.fresh() // park
+                    .strafeToLinearHeading(Vector2d(63.0, 36.0), -PI).build()
                 SequentialAction(
-                    originTAB.fresh() // back up
-                        .strafeToLinearHeading(Vector2d(-63.0, 22.0), (-23 * PI) / 24).build(),
-                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.FAR_AUTO),
-                    out.compositionLaunch(OuttakeV2.Side.RIGHT, OuttakeV2.LaunchDistance.FAR_AUTO),
-                    out.moveLowerArtifactTo(OuttakeV2.Side.LEFT),
-                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.FAR_AUTO),
-                    SleepAction(2.5),
+                    toLaunch.build(),
+                    out.tripleLaunch(motif, OuttakeV2.LaunchDistance.FAR),
+                    // intake more,
+                    ParallelAction(
+                        firstArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    ParallelAction(
+                        secondArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    ParallelAction(
+                        thirdArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    toLaunchTwo.build(),
+                    out.tripleLaunch(motif, OuttakeV2.LaunchDistance.FAR),
+                    // intake more,
+                    ParallelAction(
+                        fourArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    ParallelAction(
+                        fiveArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    ParallelAction(
+                        sixArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    toLaunchThree.build(),
+                    out.tripleLaunch(motif, OuttakeV2.LaunchDistance.FAR),
+                    // intake more,
+                    ParallelAction(
+                        sevenArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    ParallelAction(
+                        eightArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    ParallelAction(
+                        nineArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    toLaunchFour.build(),
+                    out.tripleLaunch(motif, OuttakeV2.LaunchDistance.FAR),
                     originTAB.fresh() // park
                         .strafeToLinearHeading(Vector2d(-63.0, 36.0), -PI).build(),
+                    toPark,
                     )
             }
             Locations.RedFar -> { // blue far but rotated
                 SequentialAction(
                     originTAB.fresh() // back up
                         .strafeToLinearHeading(Vector2d(-63.0, -22.0), (22 * PI) / 24).build(),
-                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.FAR_AUTO),
-                    out.compositionLaunch(OuttakeV2.Side.RIGHT, OuttakeV2.LaunchDistance.FAR_AUTO),
-                    out.moveLowerArtifactTo(OuttakeV2.Side.LEFT),
-                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.FAR_AUTO),
+                    out.compositionLaunch(OuttakeV2.Position.LEFT, OuttakeV2.LaunchDistance.FAR),
+                    out.compositionLaunch(OuttakeV2.Position.RIGHT, OuttakeV2.LaunchDistance.FAR),
+                    out.tripleLaunch(motif, OuttakeV2.LaunchDistance.FAR),
+                    out.compositionLaunch(OuttakeV2.Position.LEFT, OuttakeV2.LaunchDistance.FAR),
                     SleepAction(2.5),
                     originTAB.fresh() // park
                         .strafeToLinearHeading(Vector2d(-63.0, -36.0), -PI).build(),
@@ -77,10 +157,10 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 SequentialAction(
                     originTAB.fresh()
                         .strafeToLinearHeading(Vector2d(16.0, 25.0), 13 * -PI / 16).build(),
-                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.CLOSE_AUTO),
-                    out.compositionLaunch(OuttakeV2.Side.RIGHT, OuttakeV2.LaunchDistance.CLOSE_AUTO),
-                    out.moveLowerArtifactTo(OuttakeV2.Side.LEFT),
-                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.CLOSE_AUTO),
+                    out.compositionLaunch(OuttakeV2.Position.LEFT, OuttakeV2.LaunchDistance.CLOSE),
+                    out.compositionLaunch(OuttakeV2.Position.RIGHT, OuttakeV2.LaunchDistance.CLOSE),
+                    out.tripleLaunch(motif, OuttakeV2.LaunchDistance.CLOSE),
+                    out.compositionLaunch(OuttakeV2.Position.LEFT, OuttakeV2.LaunchDistance.CLOSE),
                     SleepAction(2.5),
                     originTAB.fresh()
                         .strafeToLinearHeading(Vector2d(66.0, 24.0), -PI).build(),
@@ -91,10 +171,10 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 SequentialAction(
                     originTAB.fresh()
                         .strafeToLinearHeading(Vector2d(16.0, -25.0), 12 * PI / 16).build(),
-                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.CLOSE_AUTO),
-                    out.compositionLaunch(OuttakeV2.Side.RIGHT, OuttakeV2.LaunchDistance.CLOSE_AUTO),
-                    out.moveLowerArtifactTo(OuttakeV2.Side.LEFT),
-                    out.compositionLaunch(OuttakeV2.Side.LEFT, OuttakeV2.LaunchDistance.CLOSE_AUTO),
+                    out.compositionLaunch(OuttakeV2.Position.LEFT, OuttakeV2.LaunchDistance.CLOSE),
+                    out.compositionLaunch(OuttakeV2.Position.RIGHT, OuttakeV2.LaunchDistance.CLOSE),
+                    out.tripleLaunch(motif, OuttakeV2.LaunchDistance.CLOSE),
+                    out.compositionLaunch(OuttakeV2.Position.LEFT, OuttakeV2.LaunchDistance.CLOSE),
                     SleepAction(2.5),
                     originTAB.fresh()
                         .strafeToLinearHeading(Vector2d(66.0, -24.0), -PI).build(),
@@ -119,7 +199,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
     protected enum class Locations(val teamColor: TeamColor, val startPose: Pose2d) {
         BlueClose(TeamColor.BLUE, Pose2d(55.0, 56.0, 3 * -PI / 4)),
-        BlueFar(TeamColor.BLUE, Pose2d(-66.0, 24.0, -PI)),
+        BlueFar(TeamColor.BLUE, Pose2d(-60.0, 24.0, -PI)),
         RedClose(TeamColor.RED, Pose2d(55.0, -56.0, 3 * PI / 4)),
         RedFar(TeamColor.RED, Pose2d(-66.0, -24.0, -PI)),
         Unknown(TeamColor.UNKNOWN, Pose2d(0.0, 0.0, 0.0)),

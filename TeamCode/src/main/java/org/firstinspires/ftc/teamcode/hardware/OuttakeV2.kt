@@ -33,16 +33,16 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
     // Flywheels
     private val leftFlywheel  = PIDVelocityController(
         createDefaultMotor(hardwareMap, "leftFlywheel"),
-        0.0175,
-        0.000002,
-        0.0001,
+        0.005,
+        0.0,
+        0.0,
         telemetry,
     )
     private val rightFlywheel = PIDVelocityController(
         createDefaultMotor(hardwareMap, "rightFlywheel"),
-        0.0175,
-        0.000002,
-        0.0001,
+        0.005,
+        0.0,
+        0.0,
         telemetry,
     )
 
@@ -72,8 +72,10 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     override fun start() {}
 
-    private val currentLaunchDistance = LaunchDistance.FAR_TELEOP
+    private var currentLaunchDistance = LaunchDistance.FAR
     private var awaitingLaunch = ArtifactColors.NONE
+
+    // Emergency Mode Stuff
     private var leftRed = true
     private val timer = ElapsedTime()
     private var delta = 0.0
@@ -149,16 +151,23 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
             toggleIntake()
         }
 
+        if (data.currentGamepadTwo.optionsWasPressed()) {
+            currentLaunchDistance = if (currentLaunchDistance == LaunchDistance.FAR) {
+                LaunchDistance.CLOSE
+            } else {
+                LaunchDistance.FAR
+            }
+        }
+
         setLEDs()
 
         // Recalculate
         ferrisWheelMoving =
             abs(ferrisWheelMotor.targetPosition - ferrisWheelMotor.currentPosition) > 5
 
-        telemetry.addData("Lower Artifact", detectedLowerArtifact)
-        telemetry.addData("Lower Artifact Blue", lowerSensorValue.blue)
-        telemetry.addData("Lower Artifact Red", lowerSensorValue.red)
-        telemetry.addData("Lower Artifact Green", lowerSensorValue.green)
+        telemetry.addData("Lower Artifact", artifacts.lowerArtifact)
+        telemetry.addData("Left Artifact", artifacts.leftArtifact)
+        telemetry.addData("Right Artifact", artifacts.rightArtifact)
         telemetry.addData("Ferris Wheel Moving", ferrisWheelMoving)
         telemetry.addData("Current Ferris Wheel Position", ferrisWheelMotor.currentPosition)
         telemetry.addData("Current Ferris Wheel Target", ferrisWheelMotor.targetPosition)
@@ -169,25 +178,36 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
 
         if (data.currentGamepadTwo.rightBumperWasPressed()) { awaitingLaunch = ArtifactColors.PURPLE }
 
-        val spunUpFlywheel = if (leftFlywheel.velocity > 1000) {
-            Position.LEFT
-        } else if (rightFlywheel.velocity > 1000) {
-            Position.RIGHT
-        } else Position.NONE
+        val velocity = if (CUSTOM != 0.0) CUSTOM else currentLaunchDistance.velocity
+
+        val spunUpFlywheel = if (velocity > 10000) {
+            // effectively inf...
+            if (leftFlywheel.velocity > 1000) {
+                Position.LEFT
+            } else if (rightFlywheel.velocity > 1000) {
+                Position.RIGHT
+            } else Position.NONE
+        } else {
+            if (abs(leftFlywheel.velocity - velocity) < 250) {
+                Position.LEFT
+            } else if (abs(rightFlywheel.velocity - velocity) < 250) {
+                Position.RIGHT
+            } else Position.NONE
+        }
 
         telemetry.addData("Spun Up Flywheel", spunUpFlywheel)
 
         // launch when a launch is queued and we aren't rotating
         if (!ferrisWheelMoving && awaitingLaunch != ArtifactColors.NONE) {
             val launchArtifact = artifacts.color(awaitingLaunch, spunUpFlywheel)
-            if (launchArtifact == spunUpFlywheel) { // launch!
+            if (launchArtifact == spunUpFlywheel && spunUpFlywheel != Position.NONE) { // launch!
                 // stop motors
                 DriveTrainKt.getInstance()
                     ?.setDriveMotors(arrayOf(0.0, 0.0, 0.0, 0.0), RunMode.RUN_USING_ENCODER)
                 runBlocking(launch(launchArtifact))
                 awaitingLaunch = ArtifactColors.NONE
                 artifacts.launched(launchArtifact)
-            } else if (launchArtifact != Position.NONE) {
+            } else if (launchArtifact != Position.NONE && spunUpFlywheel != Position.NONE) {
                 // Queue for rotation and then wait for wheel to move
                 // Don't reset awaitingLaunch: we want this to happen next time
                 val position = artifacts.rotate(spunUpFlywheel, awaitingLaunch)
@@ -209,8 +229,15 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
 
         // Flywheels (on trigger)
-        val velocity = if (CUSTOM != 0.0) CUSTOM else currentLaunchDistance.velocity
-        if (spinningUpColor != ArtifactColors.NONE) { // need to spin one up
+        if (spunUpFlywheel != Position.NONE && spinningUpColor != ArtifactColors.NONE) { // keep current spun up one
+            if (spunUpFlywheel == Position.LEFT) {
+                leftFlywheel.velocity = velocity
+                rightFlywheel.velocity = -1.0
+            } else {
+                leftFlywheel.velocity = -1.0
+                rightFlywheel.velocity = velocity
+            }
+        } else if (spinningUpColor != ArtifactColors.NONE) { // need to spin one up
             if (artifacts.leftArtifact == spinningUpColor) { // color is same
                 leftFlywheel.velocity = velocity
                 rightFlywheel.velocity = -1.0
@@ -223,7 +250,7 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
                 leftFlywheel.velocity = velocity
                 rightFlywheel.velocity = velocity
             }
-        } else {
+        } else { // not spun up and/or don't need to
             leftFlywheel.velocity = -1.0
             rightFlywheel.velocity = -1.0
         }
@@ -279,7 +306,7 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
     }
 
     private var intakeActive = false
-    private fun toggleIntake() {
+    fun toggleIntake() {
         if (intakeActive) {
             intakeMotor.power = 0.0
             intakeActive = false
@@ -295,12 +322,14 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction { leftKicker.position = LeftKickerPositions.KICK.pos },
                 SleepAction(0.5), // frozen thread may be desirable; stop drivers from leaving
                 InstantAction { leftKicker.position = LeftKickerPositions.NOT_KICK.pos },
+                InstantAction { artifacts.launched(Position.LEFT) },
             )
         } else { // right
             SequentialAction(
                 InstantAction { rightKicker.position = RightKickerPositions.KICK.pos },
                 SleepAction(0.5), // frozen thread may be desirable; stop drivers from leaving
                 InstantAction { rightKicker.position = RightKickerPositions.NOT_KICK.pos },
+                InstantAction { artifacts.launched(Position.RIGHT) },
             )
         }
     }
@@ -357,28 +386,81 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
             SequentialAction(
                 waitForSpunUp(position, distance),
                 launch(position),
+                InstantAction { setLEDs() }
             )
         )
     }
 
-    /**
-     * @param position The side to have the artifact be on, or undefined to be the available slot
-     */
-    fun moveLowerArtifactTo(position: Position?): Action {
-        return Action {
-            false
+    fun intakeUntilIndexed(): Action {
+        return object : Action {
+            private var firstRun = true
+            override fun run(p: TelemetryPacket): Boolean {
+                if (firstRun) {
+                    toggleIntake()
+                    firstRun = false
+                }
+
+                val lowerSensorValue = lowerColorSensor.normalizedColors
+
+                // When this has one, we need it to be rotated up
+                val detectedLowerArtifact = if (lowerSensorValue.blue > 0.002
+                    && lowerSensorValue.blue > lowerSensorValue.green
+                ) {
+                    ArtifactColors.PURPLE
+                } else if (lowerSensorValue.green > 0.002
+                    && lowerSensorValue.green > lowerSensorValue.blue
+                    && lowerSensorValue.green > lowerSensorValue.red
+                ) {
+                    ArtifactColors.GREEN
+                } else {
+                    ArtifactColors.NONE
+                }
+
+                if (detectedLowerArtifact != ArtifactColors.NONE) {
+                    artifacts.intake(detectedLowerArtifact)
+                    val rotateTo = artifacts.rotate()
+
+                    rotateFerrisWheel(rotateTo)
+
+                    toggleIntake()
+                    return false
+                }
+                return true
+            }
         }
     }
 
+    fun rotateOptimally(spunUp: Position, nextColor: ArtifactColors) {
+        val position = artifacts.rotate(spunUp, nextColor)
+        rotateFerrisWheel(position)
+    }
+
+    fun tripleLaunch(motif: Motif, distance: LaunchDistance): Action {
+        val firstPosition = artifacts.color(motif.first)
+        return ParallelAction(
+                SequentialAction(compositionLaunch(firstPosition, distance),
+                InstantAction { rotateOptimally(firstPosition, motif.second) },
+                compositionLaunch(firstPosition, distance),
+                InstantAction { rotateOptimally(firstPosition, motif.third) },
+                compositionLaunch(firstPosition, distance),
+            ),
+            SequentialAction(
+                spinUpUntilLaunched(firstPosition, distance),
+                spinUpUntilLaunched(firstPosition, distance),
+                spinUpUntilLaunched(firstPosition, distance),
+            ),
+        )
+    }
+
+    fun loadAutoArtifacts() = artifacts.autoArtifactPreloads()
+
     enum class LaunchDistance(val velocity: Double) {
-        FAR_TELEOP(100000000000.0),
-        FAR_AUTO(900.0),
-        CLOSE_TELEOP(0.0),
-        CLOSE_AUTO(0.0),
+        FAR(100000000000.0),
+        CLOSE(0.0),
 
     }
 
-    private enum class ArtifactColors {
+    enum class ArtifactColors {
         PURPLE,
         GREEN,
         NONE,
@@ -389,6 +471,12 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
         RIGHT,
         LOWER,
         NONE,
+    }
+
+    enum class Motif(val first: ArtifactColors, val second: ArtifactColors, val third: ArtifactColors) {
+        PURPLE_PURPLE_GREEN(ArtifactColors.PURPLE, ArtifactColors.PURPLE, ArtifactColors.GREEN),
+        PURPLE_GREEN_PURPLE(ArtifactColors.PURPLE, ArtifactColors.GREEN, ArtifactColors.PURPLE),
+        GREEN_PURPLE_PURPLE(ArtifactColors.GREEN, ArtifactColors.PURPLE, ArtifactColors.PURPLE),
     }
 
     private enum class LeftKickerPositions(val pos: Double) {
@@ -437,6 +525,8 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
             // we are looking for an artifact and hold it
             // todo: something not quite right here. what about case where rotate low
             //       so that both of our tops are filled?
+            // if we have the ability to decide, we should rotate such that both of our tops are filled
+            // and the one we want is in the correct place instead of top/lower
             if (spunUpColor != ArtifactColors.NONE && colorPos != Position.NONE) {
                 if (colorPos == spunUp) {
                     return Position.LOWER // don't move: in perfect spot
@@ -551,8 +641,8 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
 
         fun autoArtifactPreloads() {
-            lowerArtifact = ArtifactColors.GREEN
-            leftArtifact = ArtifactColors.PURPLE
+            lowerArtifact = ArtifactColors.PURPLE
+            leftArtifact = ArtifactColors.GREEN
             rightArtifact = ArtifactColors.PURPLE
         }
 
