@@ -50,46 +50,70 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         initBulkReads(hardwareMap)
         blackboard.remove("robotHeading")
 
-        val motif = limelight?.getAprilTags()?.first {
-            it.id == 23 || it.id ==
-        } ?: Motif.GREEN_PURPLE_PURPLE
+        val motif = when (limelight?.getAprilTags()?.first { it.id == 23 || it.id == 22 || it.id == 21 }?.id) {
+            23 -> {
+                Motif.PURPLE_PURPLE_GREEN
+            }
+            22 -> {
+                Motif.PURPLE_GREEN_PURPLE
+            }
+            21 -> {
+                Motif.GREEN_PURPLE_PURPLE
+            }
+            else -> Motif.GREEN_PURPLE_PURPLE // default
+        }
 
         val originTAB = roadrunnerDrive.actionBuilder(currentLocation.startPose)
 
         // todo smartly rotate poses well instead of duplicating
         val route: SequentialAction = when(currentLocation) {
             Locations.BlueFar -> { // canonical far
+                val launchPose = Vector2d(63.0, 22.0)
+                val launchHeading = (-23 * PI) / 24
+                val launchDistance = OuttakeV2.LaunchDistance.FAR
+
                 val toLaunch = originTAB.fresh() // back up
-                    .strafeToLinearHeading(Vector2d(63.0, 22.0), (-23 * PI) / 24)
+                    .strafeToLinearHeading(launchPose, launchHeading)
+
+                val offsetPose = Vector2d(0.0, 2.0)
+                val firstArtifactPose = Vector2d(36.0, 36.0)
+                val fourthArtifactPose = Vector2d(12.0, 36.0)
+                val seventhArtifactPose = Vector2d(-12.0, 36.0)
+
                 val firstArtifact = toLaunch.fresh()
-                    .strafeToLinearHeading(Vector2d(36.0, 36.0), -PI / 2)
+                    .strafeToLinearHeading(firstArtifactPose, -PI / 2)
                 val secondArtifact = firstArtifact.fresh()
-                    .strafeToLinearHeading(Vector2d(36.0, 38.0), -PI / 2)
+                    .strafeToLinearHeading(firstArtifactPose + offsetPose, -PI / 2)
                 val thirdArtifact = secondArtifact.fresh()
-                    .strafeToLinearHeading(Vector2d(36.0, 40.0), -PI / 2)
+                    .strafeToLinearHeading(firstArtifactPose + (offsetPose * 2.0), -PI / 2)
+
                 val toLaunchTwo = thirdArtifact.fresh()
-                    .strafeToLinearHeading(Vector2d(63.0, 22.0), (-23 * PI) / 24)
+                    .strafeToLinearHeading(launchPose, launchHeading)
+
                 val fourArtifact = toLaunchTwo.fresh()
-                    .strafeToLinearHeading(Vector2d(12.0, 36.0), -PI / 2)
+                    .strafeToLinearHeading(fourthArtifactPose, -PI / 2)
                 val fiveArtifact = fourArtifact.fresh()
-                    .strafeToLinearHeading(Vector2d(12.0, 38.0), -PI / 2)
+                    .strafeToLinearHeading(fourthArtifactPose + offsetPose, -PI / 2)
                 val sixArtifact = fiveArtifact.fresh()
-                    .strafeToLinearHeading(Vector2d(12.0, 40.0), -PI / 2)
+                    .strafeToLinearHeading(fourthArtifactPose + (offsetPose * 2.0), -PI / 2)
+
                 val toLaunchThree = sixArtifact.fresh()
-                    .strafeToLinearHeading(Vector2d(63.0, 22.0), (-23 * PI) / 24)
+                    .strafeToLinearHeading(launchPose, launchHeading)
+
                 val sevenArtifact = toLaunchThree.fresh()
-                    .strafeToLinearHeading(Vector2d(-12.0, 36.0), -PI / 2)
+                    .strafeToLinearHeading(seventhArtifactPose, -PI / 2)
                 val eightArtifact = sevenArtifact.fresh()
-                    .strafeToLinearHeading(Vector2d(-12.0, 38.0), -PI / 2)
+                    .strafeToLinearHeading(seventhArtifactPose + offsetPose, -PI / 2)
                 val nineArtifact = eightArtifact.fresh()
-                    .strafeToLinearHeading(Vector2d(-12.0, 40.0), -PI / 2)
+                    .strafeToLinearHeading(seventhArtifactPose + (offsetPose * 2.0), -PI / 2)
+
                 val toLaunchFour = nineArtifact.fresh()
-                    .strafeToLinearHeading(Vector2d(63.0, 22.0), (-23 * PI) / 24)
+                    .strafeToLinearHeading(launchPose, launchHeading)
                 val toPark = toLaunchFour.fresh() // park
                     .strafeToLinearHeading(Vector2d(63.0, 36.0), -PI).build()
                 SequentialAction(
                     toLaunch.build(),
-                    out.tripleLaunch(motif, OuttakeV2.LaunchDistance.FAR),
+                    out.tripleLaunch(motif, launchDistance),
                     // intake more,
                     ParallelAction(
                         firstArtifact.build(),
@@ -104,7 +128,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                         out.intakeUntilIndexed()
                     ),
                     toLaunchTwo.build(),
-                    out.tripleLaunch(motif, OuttakeV2.LaunchDistance.FAR),
+                    out.tripleLaunch(motif, launchDistance),
                     // intake more,
                     ParallelAction(
                         fourArtifact.build(),
@@ -119,7 +143,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                         out.intakeUntilIndexed()
                     ),
                     toLaunchThree.build(),
-                    out.tripleLaunch(motif, OuttakeV2.LaunchDistance.FAR),
+                    out.tripleLaunch(motif, launchDistance),
                     // intake more,
                     ParallelAction(
                         sevenArtifact.build(),
@@ -134,23 +158,103 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                         out.intakeUntilIndexed()
                     ),
                     toLaunchFour.build(),
-                    out.tripleLaunch(motif, OuttakeV2.LaunchDistance.FAR),
-                    originTAB.fresh() // park
-                        .strafeToLinearHeading(Vector2d(-63.0, 36.0), -PI).build(),
+                    out.tripleLaunch(motif, launchDistance),
                     toPark,
-                    )
+                )
             }
             Locations.RedFar -> { // blue far but rotated
+                val launchPose = Vector2d(63.0, -22.0)
+                val launchHeading = (22 * PI) / 24
+                val launchDistance = OuttakeV2.LaunchDistance.FAR
+
+                val toLaunch = originTAB.fresh() // back up
+                    .strafeToLinearHeading(launchPose, launchHeading)
+
+                val offsetPose = Vector2d(0.0, -2.0)
+                val firstArtifactPose = Vector2d(36.0, -36.0)
+                val fourthArtifactPose = Vector2d(12.0, -36.0)
+                val seventhArtifactPose = Vector2d(-12.0, -36.0)
+
+                val firstArtifact = toLaunch.fresh()
+                    .strafeToLinearHeading(firstArtifactPose, -PI / 2)
+                val secondArtifact = firstArtifact.fresh()
+                    .strafeToLinearHeading(firstArtifactPose + offsetPose, -PI / 2)
+                val thirdArtifact = secondArtifact.fresh()
+                    .strafeToLinearHeading(firstArtifactPose + (offsetPose * 2.0), -PI / 2)
+
+                val toLaunchTwo = thirdArtifact.fresh()
+                    .strafeToLinearHeading(launchPose, launchHeading)
+
+                val fourArtifact = toLaunchTwo.fresh()
+                    .strafeToLinearHeading(fourthArtifactPose, -PI / 2)
+                val fiveArtifact = fourArtifact.fresh()
+                    .strafeToLinearHeading(fourthArtifactPose + offsetPose, -PI / 2)
+                val sixArtifact = fiveArtifact.fresh()
+                    .strafeToLinearHeading(fourthArtifactPose + (offsetPose * 2.0), -PI / 2)
+
+                val toLaunchThree = sixArtifact.fresh()
+                    .strafeToLinearHeading(launchPose, launchHeading)
+
+                val sevenArtifact = toLaunchThree.fresh()
+                    .strafeToLinearHeading(seventhArtifactPose, -PI / 2)
+                val eightArtifact = sevenArtifact.fresh()
+                    .strafeToLinearHeading(seventhArtifactPose + offsetPose, -PI / 2)
+                val nineArtifact = eightArtifact.fresh()
+                    .strafeToLinearHeading(seventhArtifactPose + (offsetPose * 2.0), -PI / 2)
+
+                val toLaunchFour = nineArtifact.fresh()
+                    .strafeToLinearHeading(launchPose, launchHeading)
+                val toPark = toLaunchFour.fresh() // park
+                    .strafeToLinearHeading(Vector2d(63.0, -36.0), -PI).build()
                 SequentialAction(
-                    originTAB.fresh() // back up
-                        .strafeToLinearHeading(Vector2d(-63.0, -22.0), (22 * PI) / 24).build(),
-                    out.compositionLaunch(OuttakeV2.Position.LEFT, OuttakeV2.LaunchDistance.FAR),
-                    out.compositionLaunch(OuttakeV2.Position.RIGHT, OuttakeV2.LaunchDistance.FAR),
-                    out.tripleLaunch(motif, OuttakeV2.LaunchDistance.FAR),
-                    out.compositionLaunch(OuttakeV2.Position.LEFT, OuttakeV2.LaunchDistance.FAR),
-                    SleepAction(2.5),
-                    originTAB.fresh() // park
-                        .strafeToLinearHeading(Vector2d(-63.0, -36.0), -PI).build(),
+                    toLaunch.build(),
+                    out.tripleLaunch(motif, launchDistance),
+                    // intake more,
+                    ParallelAction(
+                        firstArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    ParallelAction(
+                        secondArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    ParallelAction(
+                        thirdArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    toLaunchTwo.build(),
+                    out.tripleLaunch(motif, launchDistance),
+                    // intake more,
+                    ParallelAction(
+                        fourArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    ParallelAction(
+                        fiveArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    ParallelAction(
+                        sixArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    toLaunchThree.build(),
+                    out.tripleLaunch(motif, launchDistance),
+                    // intake more,
+                    ParallelAction(
+                        sevenArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    ParallelAction(
+                        eightArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    ParallelAction(
+                        nineArtifact.build(),
+                        out.intakeUntilIndexed()
+                    ),
+                    toLaunchFour.build(),
+                    out.tripleLaunch(motif, launchDistance),
+                    toPark,
                 )
             }
             Locations.BlueClose -> { // canonical close
@@ -188,20 +292,22 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
         waitForStart() // setup done actually do things
 
-        //inout.start() // cursed comment out
+        out.start() // cursed comment out
+        limelight?.start()
 
         runBlocking(route)
 
         out.stop()
+        limelight?.stop()
 
         blackboard["robotHeading"] = roadrunnerDrive.localizer.pose.heading.toDouble()
     }
 
     protected enum class Locations(val teamColor: TeamColor, val startPose: Pose2d) {
         BlueClose(TeamColor.BLUE, Pose2d(55.0, 56.0, 3 * -PI / 4)),
-        BlueFar(TeamColor.BLUE, Pose2d(-60.0, 24.0, -PI)),
+        BlueFar(TeamColor.BLUE, Pose2d(60.0, 24.0, -PI)),
         RedClose(TeamColor.RED, Pose2d(55.0, -56.0, 3 * PI / 4)),
-        RedFar(TeamColor.RED, Pose2d(-66.0, -24.0, -PI)),
+        RedFar(TeamColor.RED, Pose2d(60.0, -24.0, -PI)),
         Unknown(TeamColor.UNKNOWN, Pose2d(0.0, 0.0, 0.0)),
     }
 
