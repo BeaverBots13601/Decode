@@ -62,7 +62,6 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     init {
         leftAngleServo.direction = DcMotorSimple.Direction.REVERSE
-        leftKicker.direction = Servo.Direction.REVERSE
         leftKicker.position = LeftKickerPositions.NOT_KICK.pos
         rightKicker.position = RightKickerPositions.NOT_KICK.pos
         ferrisWheelMotor.mode = RunMode.RUN_TO_POSITION
@@ -102,7 +101,7 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
                 artifacts.launched(Position.RIGHT)
             }
 
-            ferrisWheelMotor.power = 1.0
+            ferrisWheelMotor.power = 0.6
 
             delta += timer.seconds() - delta
             if (delta > 0.75) {
@@ -172,7 +171,7 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
         telemetry.addData("Current Ferris Wheel Position", ferrisWheelMotor.currentPosition)
         telemetry.addData("Current Ferris Wheel Target", ferrisWheelMotor.targetPosition)
 
-        ferrisWheelMotor.power = if (ferrisWheelMoving) 1.0 else 0.0
+        ferrisWheelMotor.power = if (ferrisWheelMoving) 0.6 else 0.0
 
         if (data.currentGamepadTwo.leftBumperWasPressed()) { awaitingLaunch = ArtifactColors.GREEN }
 
@@ -180,11 +179,10 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
 
         val velocity = if (CUSTOM != 0.0) CUSTOM else currentLaunchDistance.velocity
 
-        val spunUpFlywheel = if (velocity > 10000) {
-            // effectively inf...
-            if (leftFlywheel.velocity > 1000) {
+        val spunUpFlywheel = if (velocity > 2000) {
+            if (leftFlywheel.velocity > 2000) {
                 Position.LEFT
-            } else if (rightFlywheel.velocity > 1000) {
+            } else if (rightFlywheel.velocity > 2000) {
                 Position.RIGHT
             } else Position.NONE
         } else {
@@ -349,7 +347,7 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
                 motor.velocity = distance.velocity
 
                 val averageVelocity = motor.velocity
-                if (!spunUp && abs(averageVelocity - distance.velocity) < 25) {
+                if (!spunUp && abs(abs(averageVelocity) - distance.velocity) < 50) {
                     spunUp = true
                     timer.reset()
                 } else if (!spunUp) {
@@ -455,7 +453,7 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
     fun loadAutoArtifacts() = artifacts.autoArtifactPreloads()
 
     enum class LaunchDistance(val velocity: Double) {
-        FAR(100000000000.0),
+        FAR(2800.0),
         CLOSE(0.0),
 
     }
@@ -480,8 +478,8 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
     }
 
     private enum class LeftKickerPositions(val pos: Double) {
-        KICK(0.6),
-        NOT_KICK(0.2),
+        KICK(0.4),
+        NOT_KICK(0.8),
     }
 
     private enum class RightKickerPositions(val pos: Double) {
