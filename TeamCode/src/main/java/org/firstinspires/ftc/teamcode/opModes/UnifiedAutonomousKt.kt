@@ -5,6 +5,7 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry
 import com.acmerobotics.roadrunner.ParallelAction
 import com.acmerobotics.roadrunner.Pose2d
 import com.acmerobotics.roadrunner.SequentialAction
+import com.acmerobotics.roadrunner.SleepAction
 import com.acmerobotics.roadrunner.Vector2d
 import com.acmerobotics.roadrunner.ftc.runBlocking
 import com.qualcomm.hardware.limelightvision.Limelight3A
@@ -56,7 +57,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         val timer = ElapsedTime()
 
         while (motif == null && timer.seconds() < 5.0) { // find tag or abort if too long
-            motif = when (limelight?.getAprilTags()?.first { it.id == 23 || it.id == 22 || it.id == 21 }?.id) {
+            motif = when (limelight?.getAprilTags()?.firstOrNull { it.id == 23 || it.id == 22 || it.id == 21 }?.id) {
                 23 -> Motif.PURPLE_PURPLE_GREEN
                 22 -> Motif.PURPLE_GREEN_PURPLE
                 21 -> Motif.GREEN_PURPLE_PURPLE
@@ -72,7 +73,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         val routeParameters: RouteParameters = when(currentLocation) {
             Locations.BlueFar -> { // canonical far
                 RouteParameters(
-                    Pose2d(63.0, -22.0, (-23 * PI) / 24),
+                    Pose2d(60.0, -20.0, (-17 * PI) / 18),
                     OuttakeV2.LaunchDistance.FAR,
                     ArtifactPositions.BLUE_FAR,
                     ArtifactPositions.BLUE_MID,
@@ -83,7 +84,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
             Locations.RedFar -> { // blue far but rotated
                 RouteParameters(
-                    Pose2d(63.0, 22.0, (22 * PI) / 24),
+                    Pose2d(60.0, 20.0, (17 * PI) / 18),
                     OuttakeV2.LaunchDistance.FAR,
                     ArtifactPositions.RED_FAR,
                     ArtifactPositions.RED_MID,
@@ -94,23 +95,23 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
             Locations.BlueClose -> { // canonical close
                 RouteParameters(
-                    Pose2d(-16.0, -25.0, (13 * -PI) / 16),
+                    Pose2d(-24.0, -24.0, -3 * PI / 4),
                     OuttakeV2.LaunchDistance.CLOSE,
                     ArtifactPositions.BLUE_CLOSE,
                     ArtifactPositions.BLUE_MID,
                     ArtifactPositions.BLUE_FAR,
-                    Pose2d(-66.0, -24.0, -PI)
+                    Pose2d(-62.0, -24.0, -PI)
                 )
             }
 
             Locations.RedClose -> { // blue close but rotated
                 RouteParameters(
-                    Pose2d(-16.0, 25.0, (12 * PI) / 16),
+                    Pose2d(-24.0, 24.0, 3 * PI / 4),
                     OuttakeV2.LaunchDistance.CLOSE,
                     ArtifactPositions.RED_CLOSE,
                     ArtifactPositions.RED_MID,
                     ArtifactPositions.RED_FAR,
-                    Pose2d(-66.0, 24.0, -PI)
+                    Pose2d(-62.0, 24.0, -PI)
                 )
             }
 
@@ -124,45 +125,52 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
         val toLaunch = originTAB.fresh() // back up
             .strafeToLinearHeading(launchPose.position, launchPose.heading)
+        //.strafeToLinearHeading(launchPose.position, launchPose.heading)
 
-        val firstOffsetPose = Vector2d(0.0, 2.0) * routeParameters.firstArtifactRow.offsetSign
+        val firstOffsetPose = Vector2d(0.0, 4.0) * routeParameters.firstArtifactRow.offsetSign
         val firstArtifactPose = routeParameters.firstArtifactRow.pose.position
         val firstArtifactPickupHeading = routeParameters.firstArtifactRow.pose.heading
 
-        val fourthOffsetPose = Vector2d(0.0, 2.0) * routeParameters.secondArtifactRow.offsetSign
+        val fourthOffsetPose = Vector2d(0.0, 4.0) * routeParameters.secondArtifactRow.offsetSign
         val fourthArtifactPose = routeParameters.secondArtifactRow.pose.position
         val fourthArtifactPickupHeading = routeParameters.secondArtifactRow.pose.heading
 
-        val seventhOffsetPose = Vector2d(0.0, 2.0) * routeParameters.thirdArtifactRow.offsetSign
+        val seventhOffsetPose = Vector2d(0.0, 4.0) * routeParameters.thirdArtifactRow.offsetSign
         val seventhArtifactPose = routeParameters.thirdArtifactRow.pose.position
         val seventhArtifactPickupHeading = routeParameters.thirdArtifactRow.pose.heading
 
-        val firstArtifact = toLaunch.fresh()
-            .strafeToLinearHeading(firstArtifactPose, firstArtifactPickupHeading)
-        val secondArtifact = firstArtifact.fresh()
-            .strafeToLinearHeading(firstArtifactPose + firstOffsetPose, firstArtifactPickupHeading)
-        val thirdArtifact = secondArtifact.fresh()
+        val firstArtifactBefore = toLaunch.fresh()
+            .strafeToLinearHeading(firstArtifactPose - (firstOffsetPose * 2.0), firstArtifactPickupHeading)
+        val firstArtifact = firstArtifactBefore.fresh()
             .strafeToLinearHeading(firstArtifactPose + (firstOffsetPose * 2.0), firstArtifactPickupHeading)
+        val secondArtifact = firstArtifact.fresh()
+            .strafeToLinearHeading(firstArtifactPose + (firstOffsetPose * 3.0), firstArtifactPickupHeading)
+        val thirdArtifact = secondArtifact.fresh()
+            .strafeToLinearHeading(firstArtifactPose + (firstOffsetPose * 4.0), firstArtifactPickupHeading)
 
         val toLaunchTwo = thirdArtifact.fresh()
             .strafeToLinearHeading(launchPose.position, launchPose.heading)
 
-        val fourArtifact = toLaunchTwo.fresh()
-            .strafeToLinearHeading(fourthArtifactPose, fourthArtifactPickupHeading)
-        val fiveArtifact = fourArtifact.fresh()
-            .strafeToLinearHeading(fourthArtifactPose + fourthOffsetPose, fourthArtifactPickupHeading)
-        val sixArtifact = fiveArtifact.fresh()
+        val fourArtifactBefore = toLaunchTwo.fresh()
+            .strafeToLinearHeading(fourthArtifactPose - fourthOffsetPose, fourthArtifactPickupHeading)
+        val fourArtifact = fourArtifactBefore.fresh()
             .strafeToLinearHeading(fourthArtifactPose + (fourthOffsetPose * 2.0), fourthArtifactPickupHeading)
+        val fiveArtifact = fourArtifact.fresh()
+            .strafeToLinearHeading(fourthArtifactPose + (fourthOffsetPose * 3.0), fourthArtifactPickupHeading)
+        val sixArtifact = fiveArtifact.fresh()
+            .strafeToLinearHeading(fourthArtifactPose + (fourthOffsetPose * 4.0), fourthArtifactPickupHeading)
 
         val toLaunchThree = sixArtifact.fresh()
             .strafeToLinearHeading(launchPose.position, launchPose.heading)
 
-        val sevenArtifact = toLaunchThree.fresh()
-            .strafeToLinearHeading(seventhArtifactPose, seventhArtifactPickupHeading)
-        val eightArtifact = sevenArtifact.fresh()
-            .strafeToLinearHeading(seventhArtifactPose + seventhOffsetPose, seventhArtifactPickupHeading)
-        val nineArtifact = eightArtifact.fresh()
+        val seventhArtifactBefore = toLaunchThree.fresh()
+            .strafeToLinearHeading(seventhArtifactPose - seventhOffsetPose, seventhArtifactPickupHeading)
+        val sevenArtifact = seventhArtifactBefore.fresh()
             .strafeToLinearHeading(seventhArtifactPose + (seventhOffsetPose * 2.0), seventhArtifactPickupHeading)
+        val eightArtifact = sevenArtifact.fresh()
+            .strafeToLinearHeading(seventhArtifactPose + (seventhOffsetPose * 3.0), seventhArtifactPickupHeading)
+        val nineArtifact = eightArtifact.fresh()
+            .strafeToLinearHeading(seventhArtifactPose + (seventhOffsetPose * 4.0), seventhArtifactPickupHeading)
 
         val toLaunchFour = nineArtifact.fresh()
             .strafeToLinearHeading(launchPose.position, launchPose.heading)
@@ -172,14 +180,17 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             toLaunch.build(),
             out.tripleLaunch(motif, launchDistance),
             // intake more,
+            firstArtifactBefore.build(),
             ParallelAction(
                 firstArtifact.build(),
                 out.intakeUntilIndexed()
             ),
+            SleepAction(1.0),
             ParallelAction(
                 secondArtifact.build(),
                 out.intakeUntilIndexed()
             ),
+            SleepAction(1.0),
             ParallelAction(
                 thirdArtifact.build(),
                 out.intakeUntilIndexed()
@@ -187,14 +198,17 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             toLaunchTwo.build(),
             out.tripleLaunch(motif, launchDistance),
             // intake more,
+            fourArtifactBefore.build(),
             ParallelAction(
                 fourArtifact.build(),
                 out.intakeUntilIndexed()
             ),
+            SleepAction(1.0),
             ParallelAction(
                 fiveArtifact.build(),
                 out.intakeUntilIndexed()
             ),
+            SleepAction(1.0),
             ParallelAction(
                 sixArtifact.build(),
                 out.intakeUntilIndexed()
@@ -202,14 +216,17 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             toLaunchThree.build(),
             out.tripleLaunch(motif, launchDistance),
             // intake more,
+            seventhArtifactBefore.build(),
             ParallelAction(
                 sevenArtifact.build(),
                 out.intakeUntilIndexed()
             ),
+            SleepAction(1.0),
             ParallelAction(
                 eightArtifact.build(),
                 out.intakeUntilIndexed()
             ),
+            SleepAction(1.0),
             ParallelAction(
                 nineArtifact.build(),
                 out.intakeUntilIndexed()
@@ -224,7 +241,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
         waitForStart() // setup done actually do things
 
-        out.start() // cursed comment out
+        out.start()
         limelight?.start()
 
         runBlocking(route)
@@ -236,10 +253,12 @@ open class UnifiedAutonomousKt : LinearOpMode() {
     }
 
     protected enum class Locations(val teamColor: TeamColor, val startPose: Pose2d) {
-        BlueClose(TeamColor.BLUE, Pose2d(-55.0, -56.0, 3 * -PI / 4)),
-        BlueFar(TeamColor.BLUE, Pose2d(59.0, -24.0, -PI)),
-        RedClose(TeamColor.RED, Pose2d(-55.0, 56.0, 3 * PI / 4)),
-        RedFar(TeamColor.RED, Pose2d(59.0, 24.0, -PI)),
+        //BlueClose(TeamColor.BLUE, Pose2d(-55.0, -56.0, 3 * -PI / 4)), cursed positioning hack
+        BlueClose(TeamColor.BLUE, Pose2d(-55.5, -50.0, PI / 2)),
+        BlueFar(TeamColor.BLUE, Pose2d(63.0, -24.0, -PI)),
+//        RedClose(TeamColor.RED, Pose2d(-55.0, 50.0, 3 * PI / 4)),
+        RedClose(TeamColor.RED, Pose2d(-55.5, 50.0, -PI / 2)),
+        RedFar(TeamColor.RED, Pose2d(63.0, 24.0, -PI)),
         Unknown(TeamColor.UNKNOWN, Pose2d(0.0, 0.0, 0.0)),
     }
 
@@ -253,12 +272,18 @@ open class UnifiedAutonomousKt : LinearOpMode() {
     )
 
     private enum class ArtifactPositions(val offsetSign: Double, val pose: Pose2d) { // todo better way to do offset
-        RED_CLOSE(-1.0, Pose2d(-12.0, 36.0, PI / 2)),
-        RED_MID(-1.0, Pose2d(12.0, 36.0, PI / 2)),
-        RED_FAR(-1.0, Pose2d(36.0, 36.0, PI / 2)),
-        BLUE_CLOSE(1.0, Pose2d(-12.0, -36.0, -PI / 2)),
-        BLUE_MID(1.0, Pose2d(12.0, -36.0, -PI / 2)),
-        BLUE_FAR(1.0, Pose2d(36.0, -36.0, -PI / 2)),
+//        RED_CLOSE(1.0, Pose2d(-12.0, 34.0, PI / 2)),
+//        RED_MID(1.0, Pose2d(12.0, 34.0, PI / 2)),
+//        RED_FAR(1.0, Pose2d(36.0, 34.0, PI / 2)),
+//        BLUE_CLOSE(-1.0, Pose2d(-12.0, -34.0, -PI / 2)),
+//        BLUE_MID(-1.0, Pose2d(12.0, -34.0, -PI / 2)),
+//        BLUE_FAR(-1.0, Pose2d(36.0, -34.0, -PI / 2)),
+        RED_CLOSE(1.0, Pose2d(-18.0, 34.0, PI / 2)),
+        RED_MID(1.0, Pose2d(3.0, 34.0, PI / 2)),
+        RED_FAR(1.0, Pose2d(27.0, 34.0, PI / 2)),
+        BLUE_CLOSE(-1.0, Pose2d(-18.0, -34.0, -PI / 2)),
+        BLUE_MID(-1.0, Pose2d(3.0, -34.0, -PI / 2)),
+        BLUE_FAR(-1.0, Pose2d(27.0, -34.0, -PI / 2)),
     }
 
     protected enum class Path {

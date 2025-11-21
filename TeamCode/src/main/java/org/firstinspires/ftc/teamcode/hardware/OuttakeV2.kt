@@ -12,7 +12,6 @@ import com.qualcomm.hardware.rev.RevColorSensorV3
 import com.qualcomm.robotcore.hardware.DcMotor.RunMode
 import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.HardwareMap
-import com.qualcomm.robotcore.hardware.Servo
 import com.qualcomm.robotcore.util.ElapsedTime
 import com.qualcomm.robotcore.util.RobotLog
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
@@ -31,20 +30,22 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
     private val lowerColorSensor = hardwareMap.get(RevColorSensorV3::class.java, "lowerColorSensor")
 
     // Flywheels
-    private val leftFlywheel  = PIDVelocityController(
-        createDefaultMotor(hardwareMap, "leftFlywheel"),
-        0.005,
-        0.0,
-        0.0,
-        telemetry,
-    )
-    private val rightFlywheel = PIDVelocityController(
-        createDefaultMotor(hardwareMap, "rightFlywheel"),
-        0.005,
-        0.0,
-        0.0,
-        telemetry,
-    )
+    private val leftFlywheel  = createDefaultMotor(hardwareMap, "leftFlywheel")
+//        PIDVelocityController(
+//        createDefaultMotor(hardwareMap, "leftFlywheel"),
+//        1.0,
+//        0.0,
+//        0.0,
+//        telemetry,
+//    )
+    private val rightFlywheel = createDefaultMotor(hardwareMap, "rightFlywheel")
+//    PIDVelocityController(
+//        createDefaultMotor(hardwareMap, "rightFlywheel"),
+//        1.0,
+//        0.0,
+//        0.0,
+//        telemetry,
+//    )
 
     // Angling Servos
     private val leftAngleServo  = hardwareMap.crservo.get("leftAngleServo")
@@ -67,6 +68,7 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
         ferrisWheelMotor.mode = RunMode.RUN_TO_POSITION
         ferrisWheelMotor.targetPosition = 0
         intakeMotor.direction = DcMotorSimple.Direction.REVERSE
+        ferrisWheelMotor.power = 0.6
     }
 
     override fun start() {}
@@ -230,17 +232,19 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
         if (spunUpFlywheel != Position.NONE && spinningUpColor != ArtifactColors.NONE) { // keep current spun up one
             if (spunUpFlywheel == Position.LEFT) {
                 leftFlywheel.velocity = velocity
-                rightFlywheel.velocity = -1.0
+                //rightFlywheel.velocity = -1.0
+                rightFlywheel.velocity = 0.0
             } else {
-                leftFlywheel.velocity = -1.0
+//                leftFlywheel.velocity = -1.0
+                leftFlywheel.velocity = 0.0
                 rightFlywheel.velocity = velocity
             }
         } else if (spinningUpColor != ArtifactColors.NONE) { // need to spin one up
             if (artifacts.leftArtifact == spinningUpColor) { // color is same
                 leftFlywheel.velocity = velocity
-                rightFlywheel.velocity = -1.0
+                rightFlywheel.velocity = 0.0
             } else if (artifacts.rightArtifact == spinningUpColor) { // color is same
-                leftFlywheel.velocity = -1.0
+                leftFlywheel.velocity = 0.0
                 rightFlywheel.velocity = velocity
             } else {
                 // spin up both because we don't know where it will end up after spinning
@@ -249,8 +253,8 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
                 rightFlywheel.velocity = velocity
             }
         } else { // not spun up and/or don't need to
-            leftFlywheel.velocity = -1.0
-            rightFlywheel.velocity = -1.0
+            leftFlywheel.velocity = 0.0
+            rightFlywheel.velocity = 0.0
         }
 
         telemetry.addData("Launch Velocity (tps)", velocity)
@@ -320,6 +324,7 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction { leftKicker.position = LeftKickerPositions.KICK.pos },
                 SleepAction(0.5), // frozen thread may be desirable; stop drivers from leaving
                 InstantAction { leftKicker.position = LeftKickerPositions.NOT_KICK.pos },
+                SleepAction(0.5),
                 InstantAction { artifacts.launched(Position.LEFT) },
             )
         } else { // right
@@ -327,6 +332,7 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction { rightKicker.position = RightKickerPositions.KICK.pos },
                 SleepAction(0.5), // frozen thread may be desirable; stop drivers from leaving
                 InstantAction { rightKicker.position = RightKickerPositions.NOT_KICK.pos },
+                SleepAction(0.5),
                 InstantAction { artifacts.launched(Position.RIGHT) },
             )
         }
@@ -356,9 +362,9 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
                 }
 
                 // We are spun up, now monitor for big loss in velocity
-                if ((lastVelocity - averageVelocity) > 50.0 || timer.seconds() > 5.0) {
+                if ((lastVelocity - averageVelocity) > 50.0 || timer.seconds() > 2.5) {
                     p.put("Current Speed", averageVelocity)
-                    motor.velocity = -1.0
+                    motor.velocity = 0.0
                     return false // big drop, all done, or timed out
                 }
 
@@ -392,9 +398,11 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
     fun intakeUntilIndexed(): Action {
         return object : Action {
             private var firstRun = true
+            private val timer = ElapsedTime()
             override fun run(p: TelemetryPacket): Boolean {
                 if (firstRun) {
                     toggleIntake()
+                    timer.reset()
                     firstRun = false
                 }
 
@@ -414,7 +422,7 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
                     ArtifactColors.NONE
                 }
 
-                if (detectedLowerArtifact != ArtifactColors.NONE) {
+                if (detectedLowerArtifact != ArtifactColors.NONE || timer.seconds() > 2.5) {
                     artifacts.intake(detectedLowerArtifact)
                     val rotateTo = artifacts.rotate()
 
@@ -436,16 +444,14 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
     fun tripleLaunch(motif: Motif, distance: LaunchDistance): Action {
         val firstPosition = artifacts.color(motif.first)
         return ParallelAction(
-                SequentialAction(compositionLaunch(firstPosition, distance),
+            SequentialAction(
+                compositionLaunch(firstPosition, distance),
                 InstantAction { rotateOptimally(firstPosition, motif.second) },
+                SleepAction(0.5),
                 compositionLaunch(firstPosition, distance),
                 InstantAction { rotateOptimally(firstPosition, motif.third) },
+                SleepAction(0.5),
                 compositionLaunch(firstPosition, distance),
-            ),
-            SequentialAction(
-                spinUpUntilLaunched(firstPosition, distance),
-                spinUpUntilLaunched(firstPosition, distance),
-                spinUpUntilLaunched(firstPosition, distance),
             ),
         )
     }
@@ -454,8 +460,7 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     enum class LaunchDistance(val velocity: Double) {
         FAR(2800.0),
-        CLOSE(0.0),
-
+        CLOSE(2250.0),
     }
 
     enum class ArtifactColors {
