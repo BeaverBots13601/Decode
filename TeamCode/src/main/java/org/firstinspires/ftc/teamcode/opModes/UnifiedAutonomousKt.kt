@@ -53,20 +53,6 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         runCatching { FtcDashboard.getInstance().startCameraStream(hardwareMap.get(Limelight3A::class.java, "limelight"), 0.0) }
         blackboard.remove("robotHeading")
 
-        var motif: Motif? = null
-        val timer = ElapsedTime()
-
-        while (motif == null && timer.seconds() < 5.0) { // find tag or abort if too long
-            motif = when (limelight?.getAprilTags()?.firstOrNull { it.id == 23 || it.id == 22 || it.id == 21 }?.id) {
-                23 -> Motif.PURPLE_PURPLE_GREEN
-                22 -> Motif.PURPLE_GREEN_PURPLE
-                21 -> Motif.GREEN_PURPLE_PURPLE
-                else -> null // default
-            }
-        }
-        telemetry.addData("Detected Motif", motif)
-        motif = motif ?: Motif.GREEN_PURPLE_PURPLE // default
-
         val originTAB = roadrunnerDrive.actionBuilder(currentLocation.startPose)
 
         // todo better pose rotation?
@@ -100,7 +86,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                     ArtifactPositions.BLUE_CLOSE,
                     ArtifactPositions.BLUE_MID,
                     ArtifactPositions.BLUE_FAR,
-                    Pose2d(-62.0, -24.0, -PI)
+                    Pose2d(-62.0, -36.0, -PI)
                 )
             }
 
@@ -111,7 +97,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                     ArtifactPositions.RED_CLOSE,
                     ArtifactPositions.RED_MID,
                     ArtifactPositions.RED_FAR,
-                    Pose2d(-62.0, 24.0, -PI)
+                    Pose2d(-62.0, 36.0, -PI)
                 )
             }
 
@@ -176,9 +162,10 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             .strafeToLinearHeading(launchPose.position, launchPose.heading)
         val toPark = toLaunchFour.fresh() // park
             .strafeToLinearHeading(routeParameters.parkPose.position, routeParameters.parkPose.heading).build()
-        val route = SequentialAction(
-            toLaunch.build(),
-            out.tripleLaunch(motif, launchDistance),
+
+        val toLaunchAction = toLaunch.build()
+
+        val firstGroup = SequentialAction(
             // intake more,
             firstArtifactBefore.build(),
             ParallelAction(
@@ -196,7 +183,9 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 out.intakeUntilIndexed()
             ),
             toLaunchTwo.build(),
-            out.tripleLaunch(motif, launchDistance),
+        )
+
+        val secondGroup = SequentialAction(
             // intake more,
             fourArtifactBefore.build(),
             ParallelAction(
@@ -214,7 +203,9 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 out.intakeUntilIndexed()
             ),
             toLaunchThree.build(),
-            out.tripleLaunch(motif, launchDistance),
+        )
+
+        val thirdGroup = SequentialAction(
             // intake more,
             seventhArtifactBefore.build(),
             ParallelAction(
@@ -232,8 +223,6 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 out.intakeUntilIndexed()
             ),
             toLaunchFour.build(),
-            out.tripleLaunch(motif, launchDistance),
-            toPark,
         )
 
         telemetry.addData("INIT STATUS", "READY")
@@ -244,7 +233,31 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         out.start()
         limelight?.start()
 
-        runBlocking(route)
+        var motif: Motif? = null
+        val timer = ElapsedTime()
+
+        while (motif == null && timer.seconds() < 2.0) { // find tag or abort if too long
+            motif = when (limelight?.getAprilTags()?.firstOrNull { it.id == 23 || it.id == 22 || it.id == 21 }?.id) {
+                23 -> Motif.PURPLE_PURPLE_GREEN
+                22 -> Motif.PURPLE_GREEN_PURPLE
+                21 -> Motif.GREEN_PURPLE_PURPLE
+                else -> null // default
+            }
+        }
+        telemetry.addData("Detected Motif", motif)
+        telemetry.update()
+        motif = motif ?: Motif.GREEN_PURPLE_PURPLE // default
+
+
+        runBlocking(toLaunchAction)
+        runBlocking(out.launchAllHeld(motif, launchDistance))
+        runBlocking(firstGroup)
+        runBlocking(out.launchAllHeld(motif, launchDistance))
+        runBlocking(secondGroup)
+        runBlocking(out.launchAllHeld(motif, launchDistance))
+        runBlocking(thirdGroup)
+        runBlocking(out.launchAllHeld(motif, launchDistance))
+        runBlocking(toPark)
 
         out.stop()
         limelight?.stop()
@@ -253,11 +266,11 @@ open class UnifiedAutonomousKt : LinearOpMode() {
     }
 
     protected enum class Locations(val teamColor: TeamColor, val startPose: Pose2d) {
-        //BlueClose(TeamColor.BLUE, Pose2d(-55.0, -56.0, 3 * -PI / 4)), cursed positioning hack
+        //BlueClose(TeamColor.BLUE, Pose2d(-55.0, -56.0, 3 * -PI / 4)), cursed positioning hack below
         BlueClose(TeamColor.BLUE, Pose2d(-55.5, -50.0, PI / 2)),
         BlueFar(TeamColor.BLUE, Pose2d(63.0, -24.0, -PI)),
 //        RedClose(TeamColor.RED, Pose2d(-55.0, 50.0, 3 * PI / 4)),
-        RedClose(TeamColor.RED, Pose2d(-55.5, 50.0, -PI / 2)),
+        RedClose(TeamColor.RED, Pose2d(-80.0, 50.0, -PI / 2)),
         RedFar(TeamColor.RED, Pose2d(63.0, 24.0, -PI)),
         Unknown(TeamColor.UNKNOWN, Pose2d(0.0, 0.0, 0.0)),
     }

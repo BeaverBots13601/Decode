@@ -304,8 +304,8 @@ public final class MecanumDrive {
 
             if (t >= timeTrajectory.duration
 //                    && error.position.norm() < 2.5
-//                    && error.heading.real < 5.0) {
-            ){ leftFront.setPower(0);
+                    && error.heading.real < 5.0) {
+                leftFront.setPower(0);
                 leftBack.setPower(0);
                 rightBack.setPower(0);
                 rightFront.setPower(0);

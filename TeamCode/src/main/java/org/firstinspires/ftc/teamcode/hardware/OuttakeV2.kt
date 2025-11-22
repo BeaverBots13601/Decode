@@ -17,7 +17,6 @@ import com.qualcomm.robotcore.util.RobotLog
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcore.external.Telemetry
-import org.firstinspires.ftc.teamcode.misc.PIDVelocityController
 import kotlin.math.abs
 
 @Config
@@ -73,7 +72,7 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     override fun start() {}
 
-    private var currentLaunchDistance = LaunchDistance.FAR
+    private var currentLaunchDistance = LaunchDistance.CLOSE
     private var awaitingLaunch = ArtifactColors.NONE
 
     // Emergency Mode Stuff
@@ -422,7 +421,7 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
                     ArtifactColors.NONE
                 }
 
-                if (detectedLowerArtifact != ArtifactColors.NONE || timer.seconds() > 2.5) {
+                if (detectedLowerArtifact != ArtifactColors.NONE || timer.seconds() > 1.5) {
                     artifacts.intake(detectedLowerArtifact)
                     val rotateTo = artifacts.rotate()
 
@@ -441,19 +440,39 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
         rotateFerrisWheel(position)
     }
 
-    fun tripleLaunch(motif: Motif, distance: LaunchDistance): Action {
-        val firstPosition = artifacts.color(motif.first)
-        return ParallelAction(
-            SequentialAction(
-                compositionLaunch(firstPosition, distance),
-                InstantAction { rotateOptimally(firstPosition, motif.second) },
-                SleepAction(0.5),
-                compositionLaunch(firstPosition, distance),
-                InstantAction { rotateOptimally(firstPosition, motif.third) },
-                SleepAction(0.5),
-                compositionLaunch(firstPosition, distance),
-            ),
+    fun launchAllHeld(motif: Motif, distance: LaunchDistance): Action {
+        val numArtifacts = artifacts.artifactsHeld
+
+        if (numArtifacts == 0) return InstantAction {}
+
+        var firstPosition = artifacts.color(motif.first)
+        if (firstPosition == Position.LOWER) {
+            // rotate us to right
+            rotateOptimally(Position.RIGHT, motif.first)
+            firstPosition = Position.RIGHT
+        }
+
+        if (numArtifacts == 1) return compositionLaunch(firstPosition, distance)
+
+        if (numArtifacts == 2) return SequentialAction(
+            compositionLaunch(firstPosition, distance),
+            InstantAction { rotateOptimally(firstPosition, motif.second) },
+            SleepAction(0.5),
+            compositionLaunch(firstPosition, distance),
         )
+
+        if (numArtifacts == 3) return SequentialAction(
+            compositionLaunch(firstPosition, distance),
+            InstantAction { rotateOptimally(firstPosition, motif.second) },
+            SleepAction(0.5),
+            compositionLaunch(firstPosition, distance),
+            InstantAction { rotateOptimally(firstPosition, motif.third) },
+            SleepAction(0.5),
+            compositionLaunch(firstPosition, distance),
+        )
+
+        RobotLog.ee("OuttakeV2", "Impossible Case! Aaa!")
+        return InstantAction {} // impossible case
     }
 
     fun loadAutoArtifacts() = artifacts.autoArtifactPreloads()
@@ -657,9 +676,17 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
             get() = artifacts[2]
             private set(it) { artifacts[2] = it }
 
-
         var lowerArtifact
             get() = artifacts[0]
             private set(it) { artifacts[0] = it }
+
+        val artifactsHeld: Int
+            get() {
+                var num = 0
+                if (artifacts[0] != ArtifactColors.NONE) { num++ }
+                if (artifacts[1] != ArtifactColors.NONE) { num++ }
+                if (artifacts[2] != ArtifactColors.NONE) { num++ }
+                return num
+            }
     }
 }
