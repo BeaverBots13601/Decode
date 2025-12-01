@@ -312,7 +312,7 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
             intakeMotor.power = 0.0
             intakeActive = false
         } else {
-            intakeMotor.power = 0.7
+            intakeMotor.power = 0.8
             intakeActive = true
         }
     }
@@ -524,13 +524,6 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
         )
 
         fun intake(color: ArtifactColors) {
-            if (lowerArtifact != ArtifactColors.NONE) {
-                RobotLog.ee(
-                    "OuttakeV2",
-                    "You screwed up: Lower Artifact was not empty when intake was called"
-                )
-                return
-            }
             lowerArtifact = color
         }
 
