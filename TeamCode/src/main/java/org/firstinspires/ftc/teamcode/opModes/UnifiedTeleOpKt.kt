@@ -39,7 +39,7 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
     override fun runOpMode() {
         initBulkReads(hardwareMap)
 
-        val telemetry = MultipleTelemetry(this.telemetry, FtcDashboard.getInstance().telemetry, PanelsTelemetry.ftcTelemetry)
+        val telemetry = MultipleTelemetry(this.telemetry, FtcDashboard.getInstance().telemetry)
         val imu = IMUSensorKt.getInstance(
             hardwareMap,
             SensorDeviceKt.SensorInitData(teamColor, FtcDashboard.getInstance().isEnabled),

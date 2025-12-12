@@ -12,6 +12,7 @@ import com.qualcomm.hardware.rev.RevColorSensorV3
 import com.qualcomm.robotcore.hardware.DcMotor.RunMode
 import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.HardwareMap
+import com.qualcomm.robotcore.hardware.NormalizedRGBA
 import com.qualcomm.robotcore.util.ElapsedTime
 import com.qualcomm.robotcore.util.RobotLog
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
@@ -115,21 +116,8 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
             return
         }
 
-        val lowerSensorValue = lowerColorSensor.normalizedColors
-
         // When this has one, we need it to be rotated up
-        val detectedLowerArtifact = if (lowerSensorValue.blue > 0.002
-            && lowerSensorValue.blue > lowerSensorValue.green
-        ) {
-            ArtifactColors.PURPLE
-        } else if (lowerSensorValue.green > 0.002
-            && lowerSensorValue.green > lowerSensorValue.blue
-            && lowerSensorValue.green > lowerSensorValue.red
-        ) {
-            ArtifactColors.GREEN
-        } else {
-            ArtifactColors.NONE
-        }
+        val detectedLowerArtifact = detectArtifact(lowerColorSensor.normalizedColors)
 
         var ferrisWheelMoving =
             abs(ferrisWheelMotor.targetPosition - ferrisWheelMotor.currentPosition) > 5
@@ -476,6 +464,16 @@ class OuttakeV2 private constructor(hardwareMap: HardwareMap, initData: InitData
     }
 
     fun loadAutoArtifacts() = artifacts.autoArtifactPreloads()
+
+    private fun detectArtifact(data: NormalizedRGBA): ArtifactColors {
+        return if (data.blue > 0.002 && data.blue > data.green) {
+            ArtifactColors.PURPLE
+        } else if (data.green > 0.002 && data.green > data.blue && data.green > data.red) {
+            ArtifactColors.GREEN
+        } else {
+            ArtifactColors.NONE
+        }
+    }
 
     enum class LaunchDistance(val velocity: Double) {
         FAR(2800.0),

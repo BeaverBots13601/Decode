@@ -6,8 +6,8 @@ import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcore.external.Telemetry
 
 class Riser private constructor(hardwareMap: HardwareMap, initData: InitData, private val telemetry: Telemetry) : HardwareMechanismKt() {
-    val leftRiserMotor = createDefaultMotor(hardwareMap, "leftRiserMotor")
-    val rightRiserMotor = createDefaultMotor(hardwareMap, "rightRiserMotor")
+    val leftRiserMotor = createDefaultMotor(hardwareMap, "leftRiser")
+    val rightRiserMotor = createDefaultMotor(hardwareMap, "rightRiser")
 
     override fun start() {}
 

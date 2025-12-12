@@ -40,5 +40,14 @@ data class PoseKt(
             }
             return out
         }
+
+        /**
+         * @return double angle within the range [-180, 180]
+         */
+        fun normalizeAngleDeg(angle: Double) = Math.toDegrees(
+            normalizeAngle(
+                Math.toRadians(angle)
+            )
+        )
     }
 }
