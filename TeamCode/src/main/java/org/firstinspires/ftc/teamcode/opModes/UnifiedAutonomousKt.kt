@@ -12,11 +12,9 @@ import com.qualcomm.hardware.limelightvision.Limelight3A
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.Disabled
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
-import com.qualcomm.robotcore.util.ElapsedTime
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
-import org.firstinspires.ftc.teamcode.hardware.OuttakeV2
-import org.firstinspires.ftc.teamcode.hardware.OuttakeV2.Motif
+import org.firstinspires.ftc.teamcode.hardware.OuttakeV3
 import org.firstinspires.ftc.teamcode.roadrunner.MecanumDrive
 import org.firstinspires.ftc.teamcode.sensor.LimelightKt
 import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
@@ -39,7 +37,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
     ), telemetry) }
 
     override fun runOpMode() {
-        val out = OuttakeV2.getInstance(hardwareMap, HardwareMechanismKt.InitData(
+        val out = OuttakeV3.getInstance(hardwareMap, HardwareMechanismKt.InitData(
             currentLocation.teamColor,
             HardwareMechanismKt.DriveMode.ROBOT,
             FtcDashboard.getInstance().isEnabled,
@@ -60,7 +58,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             Locations.BlueFar -> { // canonical far
                 RouteParameters(
                     Pose2d(60.0, -20.0, (-17 * PI) / 18),
-                    OuttakeV2.LaunchDistance.FAR,
+                    OuttakeV3.LaunchDistance.CLOSE_PEAK,
                     ArtifactPositions.BLUE_FAR,
                     ArtifactPositions.BLUE_MID,
                     ArtifactPositions.BLUE_CLOSE,
@@ -71,7 +69,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             Locations.RedFar -> { // blue far but rotated
                 RouteParameters(
                     Pose2d(60.0, 20.0, (17 * PI) / 18),
-                    OuttakeV2.LaunchDistance.FAR,
+                    OuttakeV3.LaunchDistance.CLOSE_PEAK,
                     ArtifactPositions.RED_FAR,
                     ArtifactPositions.RED_MID,
                     ArtifactPositions.RED_CLOSE,
@@ -82,7 +80,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             Locations.BlueClose -> { // canonical close
                 RouteParameters(
                     Pose2d(-24.0, -24.0, -3 * PI / 4),
-                    OuttakeV2.LaunchDistance.CLOSE,
+                    OuttakeV3.LaunchDistance.CLOSE,
                     ArtifactPositions.BLUE_CLOSE,
                     ArtifactPositions.BLUE_MID,
                     ArtifactPositions.BLUE_FAR,
@@ -93,7 +91,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             Locations.RedClose -> { // blue close but rotated
                 RouteParameters(
                     Pose2d(-24.0, 24.0, 3 * PI / 4),
-                    OuttakeV2.LaunchDistance.CLOSE,
+                    OuttakeV3.LaunchDistance.CLOSE,
                     ArtifactPositions.RED_CLOSE,
                     ArtifactPositions.RED_MID,
                     ArtifactPositions.RED_FAR,
@@ -170,17 +168,17 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             firstArtifactBefore.build(),
             ParallelAction(
                 firstArtifact.build(),
-                out.intakeUntilIndexed()
+                out.intakeUntilDetectedOrTimeout()
             ),
             SleepAction(1.0),
             ParallelAction(
                 secondArtifact.build(),
-                out.intakeUntilIndexed()
+                out.intakeUntilDetectedOrTimeout()
             ),
             SleepAction(1.0),
             ParallelAction(
                 thirdArtifact.build(),
-                out.intakeUntilIndexed()
+                out.intakeUntilDetectedOrTimeout()
             ),
             toLaunchTwo.build(),
         )
@@ -190,17 +188,17 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             fourArtifactBefore.build(),
             ParallelAction(
                 fourArtifact.build(),
-                out.intakeUntilIndexed()
+                out.intakeUntilDetectedOrTimeout()
             ),
             SleepAction(1.0),
             ParallelAction(
                 fiveArtifact.build(),
-                out.intakeUntilIndexed()
+                out.intakeUntilDetectedOrTimeout()
             ),
             SleepAction(1.0),
             ParallelAction(
                 sixArtifact.build(),
-                out.intakeUntilIndexed()
+                out.intakeUntilDetectedOrTimeout()
             ),
             toLaunchThree.build(),
         )
@@ -210,17 +208,17 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             seventhArtifactBefore.build(),
             ParallelAction(
                 sevenArtifact.build(),
-                out.intakeUntilIndexed()
+                out.intakeUntilDetectedOrTimeout()
             ),
             SleepAction(1.0),
             ParallelAction(
                 eightArtifact.build(),
-                out.intakeUntilIndexed()
+                out.intakeUntilDetectedOrTimeout()
             ),
             SleepAction(1.0),
             ParallelAction(
                 nineArtifact.build(),
-                out.intakeUntilIndexed()
+                out.intakeUntilDetectedOrTimeout()
             ),
             toLaunchFour.build(),
         )
@@ -233,30 +231,15 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         out.start()
         limelight?.start()
 
-        var motif: Motif? = null
-        val timer = ElapsedTime()
-
-        while (motif == null && timer.seconds() < 2.0) { // find tag or abort if too long
-            motif = when (limelight?.getAprilTags()?.firstOrNull { it.id == 23 || it.id == 22 || it.id == 21 }?.id) {
-                23 -> Motif.PURPLE_PURPLE_GREEN
-                22 -> Motif.PURPLE_GREEN_PURPLE
-                21 -> Motif.GREEN_PURPLE_PURPLE
-                else -> null // default
-            }
-        }
-        telemetry.addData("Detected Motif", motif)
-        telemetry.update()
-        motif = motif ?: Motif.GREEN_PURPLE_PURPLE // default
-
 
         runBlocking(toLaunchAction)
-        runBlocking(out.launchAllHeld(motif, launchDistance))
+        runBlocking(out.launchAllHeld(launchDistance))
         runBlocking(firstGroup)
-        runBlocking(out.launchAllHeld(motif, launchDistance))
+        runBlocking(out.launchAllHeld(launchDistance))
         runBlocking(secondGroup)
-        runBlocking(out.launchAllHeld(motif, launchDistance))
+        runBlocking(out.launchAllHeld(launchDistance))
         runBlocking(thirdGroup)
-        runBlocking(out.launchAllHeld(motif, launchDistance))
+        runBlocking(out.launchAllHeld(launchDistance))
         runBlocking(toPark)
 
         out.stop()
@@ -277,7 +260,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
     private data class RouteParameters(
         val launchPose: Pose2d,
-        val launchDistance: OuttakeV2.LaunchDistance,
+        val launchDistance: OuttakeV3.LaunchDistance,
         val firstArtifactRow: ArtifactPositions,
         val secondArtifactRow: ArtifactPositions,
         val thirdArtifactRow: ArtifactPositions,

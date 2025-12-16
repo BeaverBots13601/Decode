@@ -18,7 +18,7 @@ class AxonEncoderTester : LinearOpMode() {
             0.0,
             0.0,
             telemetry,
-            5.4
+            -4.0,
         )
 
         waitForStart()

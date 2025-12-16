@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.hardware
 
+import com.acmerobotics.dashboard.config.Config
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket
 import com.acmerobotics.roadrunner.Action
 import com.acmerobotics.roadrunner.InstantAction
@@ -23,27 +24,33 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose3D
 import org.firstinspires.ftc.teamcode.misc.AxonDriver
 import org.firstinspires.ftc.teamcode.misc.GoBildaRGBIndicatorDriver
 import org.firstinspires.ftc.teamcode.misc.GoBildaRGBIndicatorDriver.Color
+import org.firstinspires.ftc.teamcode.misc.PIDVelocityController
 import org.firstinspires.ftc.teamcode.misc.PoseKt
 import org.firstinspires.ftc.teamcode.sensor.LimelightKt
 import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
-import java.util.LinkedList
-import java.util.Queue
 import kotlin.math.abs
 
+@Config
 class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData, val telemetry: Telemetry) : HardwareMechanismKt() {
-    // LEDs (for some reason it makes the most sense to do these as servos)
+    // LEDs
     private val leftIndicatorLED  = GoBildaRGBIndicatorDriver(hardwareMap.servo.get("leftIndicatorLED"))
     private val rightIndicatorLED = GoBildaRGBIndicatorDriver(hardwareMap.servo.get("rightIndicatorLED"))
 
     // Flywheel
-    private val flywheel = createDefaultMotor(hardwareMap, "flywheel").apply {
-        direction = DcMotorSimple.Direction.REVERSE
-    }
+    private val flywheel = PIDVelocityController(
+        createDefaultMotor(hardwareMap, "flywheel").apply {
+            direction = DcMotorSimple.Direction.REVERSE
+        },
+        0.0175,
+        0.000002,
+        0.00001,
+        telemetry,
+    )
 
     // Color Sensor
     private val intakeColorSensor = hardwareMap.get(RevColorSensorV3::class.java, "intakeColorSensor")
 
-    private val hoodAngler = hardwareMap.servo.get("hoodAngler")
+    private val locker = hardwareMap.servo.get("locker")
 
     // Intake
     private val intakeMotor = createDefaultMotor(hardwareMap, "intakeMotor").apply {
@@ -59,7 +66,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         0.0,
         0.0,
         telemetry,
-        5.4
+        -109.0 / 30.0,
     )
 
     // Limelight
@@ -73,6 +80,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     init {
         leftKicker.position = LeftKickerPosition.NOT_KICK.pos
         rightKicker.position = RightKickerPosition.NOT_KICK.pos
+        locker.position = LockerPosition.LOCK.pos
     }
 
     override fun start() {}
@@ -92,11 +100,13 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         // !!! EMERGENCY !!!
         if (data.currentGamepadTwo.ps) {
             if (data.currentGamepadTwo.dpad_down) {
-                flywheel.velocity = -1000000.0
+                flywheel.setVelocity(-1000000.0)
             } else if (data.currentGamepadTwo.dpad_up) {
-                flywheel.velocity = 1000000.0
+                flywheel.setVelocity(1000000.0)
             } else if (data.currentGamepadTwo.rightBumperWasPressed()) {
                 runBlocking(launch())
+            } else {
+                flywheel.setVelocity(null)
             }
 
             delta += timer.seconds() - delta
@@ -114,8 +124,22 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         val detectedArtifact = detectArtifact(intakeColorSensor.normalizedColors)
         telemetry.addData("Detected Artifact", detectedArtifact)
 
+        if (artifacts.midArtifact == ArtifactColors.NONE && detectedArtifact != ArtifactColors.NONE) {
+            // Assume a artifact has moved in
+            artifacts.midArtifact = detectedArtifact
+        } else if (artifacts.midArtifact != ArtifactColors.NONE && detectedArtifact == ArtifactColors.NONE) {
+            // Assume a artifact has moved to top
+            artifacts.topArtifact = artifacts.midArtifact
+            artifacts.midArtifact = ArtifactColors.NONE
+        }
+
+        telemetry.addData("Top Artifact", artifacts.topArtifact)
+        telemetry.addData("Mid Artifact", artifacts.midArtifact)
+
         // Intaking
         if (data.currentGamepadTwo.squareWasPressed()) {
+            toggleIntake()
+        } else if (data.currentGamepadOne.squareWasPressed()) {
             toggleIntake()
         }
 
@@ -125,14 +149,14 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
 
         // Setting launch distance
         if (data.currentGamepadTwo.optionsWasPressed()) {
-            currentLaunchDistance = if (currentLaunchDistance == LaunchDistance.FAR) {
+            currentLaunchDistance = if (currentLaunchDistance == LaunchDistance.CLOSE_PEAK) {
                 LaunchDistance.CLOSE
             } else {
-                LaunchDistance.FAR
+                LaunchDistance.CLOSE_PEAK
             }
         }
 
-        setLEDs()
+        setLEDs(artifacts.topArtifact)
 
         // Fire!
         if (data.currentGamepadTwo.crossWasPressed()) {
@@ -142,15 +166,13 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
 
         // Flywheels (on trigger)
-        flywheel.velocity = if (data.currentGamepadTwo.right_trigger < 0.5) {
+        flywheel.setVelocity(if (data.currentGamepadTwo.right_trigger < 0.5) {
             telemetry.addData("Target Velocity (tps)", 0.0)
-            flywheel.power = 0.0
-            0.0
+            null // disable control
         } else {
             telemetry.addData("Target Velocity (tps)", currentLaunchDistance.velocity)
-            flywheel.power = 1.0
-            currentLaunchDistance.velocity
-        }
+            if (CUSTOM != 0.0) CUSTOM else currentLaunchDistance.velocity
+        })
 
         // region Figure out if spun up
         val currentVelocity = flywheel.velocity
@@ -172,9 +194,9 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
 
         // Turret angling
         if (data.currentGamepadTwo.left_bumper) {
-            turntableAxon.overridePower = -0.2
-        } else if (data.currentGamepadTwo.right_bumper) {
             turntableAxon.overridePower = 0.2
+        } else if (data.currentGamepadTwo.right_bumper) {
+            turntableAxon.overridePower = -0.2
         } else {
             turntableAxon.overridePower = null // let the control loop below handle it
 
@@ -184,8 +206,10 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             val delta = if (limelight == null) { // find delta
                 null // Not attached; do nothing
             } else if (depotTag != null) {
-                -depotTag.orientation.yaw // negative! because positive is left by default
+                -depotTag.position.x * 90 // negative! because positive is left by default
             } else 90.0 // rotate to find the tag
+
+            telemetry.addData("Delta", delta)
 
             // rotate
             rotateTurretByDelta(delta)
@@ -212,7 +236,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             intakeMotor.power = 0.0
             intakeActive = false
         } else {
-            intakeMotor.power = 1.0
+            intakeMotor.power = 0.8
             intakeActive = true
         }
     }
@@ -220,16 +244,56 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     private var transferActive = false
     fun toggleTransfer() {
         if (transferActive) {
-            transfer.power = 1.0
+            transfer.power = 0.0
             transferActive = false
         } else {
-            transfer.power = 0.0
+            transfer.power = 1.0
             transferActive = true
         }
     }
 
-    private fun setLEDs() {
-        //TODO() temporary noop
+    fun transferOff() {
+        transfer.power = 0.0
+        transferActive = false
+    }
+
+    fun transferOn() {
+        transfer.power = 1.0
+        transferActive = true
+    }
+
+    private fun setLEDs(display: ArtifactColors) {
+        // Left indicates velocity
+        val velocity = flywheel.velocity
+        val target = if (CUSTOM != 0.0) CUSTOM else currentLaunchDistance.velocity
+
+        if (abs(velocity - target) < 100) {
+            leftIndicatorLED.color = Color.GREEN
+        } else {
+            leftIndicatorLED.color = Color.OFF
+        }
+
+        return
+
+        if(velocity > 500.0) {
+//            val error = abs(velocity - target) / target
+//            val color = 0.277 + (0.233 * (1 - error)) // range from red to green
+//            leftIndicatorLED.rawColor = color
+        } else {
+            leftIndicatorLED.color = Color.OFF // off
+        }
+
+        when (display) {
+            ArtifactColors.GREEN -> {
+                rightIndicatorLED.color = Color.GREEN
+            }
+            ArtifactColors.PURPLE -> {
+                rightIndicatorLED.color = Color.VIOLET
+            }
+            ArtifactColors.NONE -> {
+                rightIndicatorLED.color = Color.OFF
+            }
+        }
     }
 
     /**
@@ -244,10 +308,10 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             return
         }
         // this may underflow or overflow so we're always in [-180, 180]
-        var target = PoseKt.normalizeAngleDeg(turntableAxon.position + delta)
+        var target = PoseKt.normalizeAngleDeg(turntableAxon.normalizedPosition + delta)
 
-        // also clamp to [-130, 130] to meet hardware requirements (allowing 20deg of overshoot - too much?)
-        target = clamp(target, -130.0, 130.0)
+        // also clamp to [-110, 130] to meet hardware requirements (too much overshoot allowance?)
+        target = clamp(target, -440.0, 520.0)
 
         turntableAxon.targetPosition = target
     }
@@ -257,7 +321,8 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     fun launch(): Action {
         return SequentialAction(
             // bring artifact to top (launches one if in top)
-            InstantAction { toggleTransfer() },
+            InstantAction { locker.position = LockerPosition.NOT_LOCK.pos },
+            InstantAction { transferOn() },
             waitUntilLaunched(1.0), // times out when nothing in transfer
             // launch top artifact
             InstantAction { leftKicker.position = LeftKickerPosition.KICK.pos },
@@ -265,7 +330,8 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             SleepAction(0.5),
             InstantAction { leftKicker.position = LeftKickerPosition.NOT_KICK.pos },
             InstantAction { rightKicker.position = RightKickerPosition.NOT_KICK.pos },
-            InstantAction { toggleTransfer() },
+            InstantAction { transferOff() },
+            InstantAction { locker.position = LockerPosition.LOCK.pos },
             // fixme: launches two
         )
     }
@@ -281,7 +347,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             override fun run(p: TelemetryPacket): Boolean {
                 p.put("Spun Up?", spunUp)
 
-                flywheel.velocity = distance.velocity
+                flywheel.setVelocity(distance.velocity)
 
                 val averageVelocity = flywheel.velocity
                 if (!spunUp && abs(abs(averageVelocity) - distance.velocity) < 50) {
@@ -295,7 +361,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
                 // We are spun up, now monitor for big loss in velocity
                 if ((lastVelocity - averageVelocity) > 50.0 || timer.seconds() > timeout) {
                     p.put("Current Speed", averageVelocity)
-                    flywheel.velocity = 0.0
+                    flywheel.setVelocity(null)
                     return false // big drop, all done, or timed out
                 }
 
@@ -329,7 +395,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
                 // Monitor for big loss in velocity
                 if ((lastVelocity - averageVelocity) > 50.0 || timer.seconds() > timeout) {
                     p.put("Current Speed", averageVelocity)
-                    flywheel.velocity = 0.0
+                    flywheel.setVelocity(null)
                     return false // big drop & all done, or timed out
                 }
 
@@ -384,23 +450,24 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         return InstantAction {} // impossible case
     }
 
-    fun intakeUntilDetected(): Action {
-        TODO()
+    fun intakeUntilDetectedOrTimeout(): Action {
         return object : Action {
             private var firstRun = true
             private val timer = ElapsedTime()
             override fun run(p: TelemetryPacket): Boolean {
                 if (firstRun) {
                     toggleIntake()
+                    transferOff()
                     timer.reset()
                     firstRun = false
                 }
 
-                // When this has one, we need it to be rotated up
-                val detectedLowerArtifact = detectArtifact(intakeColorSensor.normalizedColors)
+                val detectedArtifact = detectArtifact(intakeColorSensor.normalizedColors)
 
-                if (detectedLowerArtifact != ArtifactColors.NONE || timer.seconds() > 1.5) {
-                    artifacts.intake(detectedLowerArtifact)
+                if ((artifacts.midArtifact == ArtifactColors.NONE && detectedArtifact != ArtifactColors.NONE)
+                    || timer.seconds() > 1.5) {
+                    artifacts.intake(detectedArtifact)
+                    transferOn()
 
                     toggleIntake()
                     return false
@@ -412,27 +479,35 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     // endregion
 
     private class ArtifactData {
-        val artifacts: Queue<ArtifactColors> = LinkedList()
+        var topArtifact: ArtifactColors = ArtifactColors.NONE
+        var midArtifact: ArtifactColors = ArtifactColors.NONE
 
         fun intake(color: ArtifactColors) {
-            artifacts.add(color)
+            midArtifact = color // can't know anything about lower
         }
 
         fun launched() {
-            artifacts.poll()
+            topArtifact = ArtifactColors.NONE
         }
 
         fun autoArtifactPreloads() {
-            artifacts.addAll(arrayOf(
-                ArtifactColors.PURPLE,
-                ArtifactColors.GREEN,
-                ArtifactColors.PURPLE
-            ))
+            topArtifact = ArtifactColors.PURPLE
+            midArtifact = ArtifactColors.PURPLE
+            // lowArtif = ArtifactColors.PURPLE
         }
 
         val artifactsHeld: Int
-            get() = artifacts.count()
+            get() {
+                var i = 0
+                if (topArtifact != ArtifactColors.NONE) i++
+                if (midArtifact != ArtifactColors.NONE) i++
+                // If we hold both we should assume we hold a third as well since we can't see
+                if (i == 2) i++
+                return i
+            }
     }
+
+    fun loadAutoArtifacts() = artifacts.autoArtifactPreloads()
 
     // region Utility Functions
     private fun detectArtifact(data: NormalizedRGBA): ArtifactColors {
@@ -464,8 +539,8 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     // region Enums
     enum class LaunchDistance(val velocity: Double) {
-        FAR(1500.0),
-        CLOSE(1500.0),
+        CLOSE_PEAK(900.0),
+        CLOSE(750.0),
     }
 
     enum class ArtifactColors {
@@ -489,7 +564,13 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         KICK(0.75),
         NOT_KICK(0.27),
     }
+
+    enum class LockerPosition(val pos: Double) {
+        LOCK(0.25),
+        NOT_LOCK(0.55),
+    }
     // endregion
 
-    companion object : HardwareMechanismSingletonManager<OuttakeV3>(::OuttakeV3)
-}
+    companion object : HardwareMechanismSingletonManager<OuttakeV3>(::OuttakeV3) {
+        @JvmField var CUSTOM: Double = 0.0
+    }}

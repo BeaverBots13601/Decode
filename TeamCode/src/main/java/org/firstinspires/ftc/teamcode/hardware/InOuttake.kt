@@ -81,8 +81,8 @@ class InOuttake private constructor(hardwareMap: HardwareMap, initData: InitData
             -1.0 // uncontrolled stop
         }
 
-        leftFlywheelMotor.velocity = velocity
-        rightFlywheelMotor.velocity = velocity
+        //leftFlywheelMotor.velocity = velocity
+        //rightFlywheelMotor.velocity = velocity
         telemetry.addData("Launch Velocity (tps)", velocity)
 
         val avgVelocity = (leftFlywheelMotor.velocity + rightFlywheelMotor.velocity) / 2
@@ -171,14 +171,14 @@ class InOuttake private constructor(hardwareMap: HardwareMap, initData: InitData
             private var firstRun = true
             override fun run(p: TelemetryPacket): Boolean {
                 firstRun = false
-                leftFlywheelMotor.velocity = distance.velocity
-                rightFlywheelMotor.velocity = distance.velocity
+                //leftFlywheelMotor.velocity = distance.velocity
+                //rightFlywheelMotor.velocity = distance.velocity
                 p.put("Current Speed", (leftFlywheelMotor.velocity + rightFlywheelMotor.velocity) / 2)
                 if (abs(leftFlywheelMotor.velocity - distance.velocity) < 25
                     && abs(rightFlywheelMotor.velocity - distance.velocity) < 25) {
                     runBlocking(SleepAction(1.0))
-                    leftFlywheelMotor.velocity = -1.0
-                    rightFlywheelMotor.velocity = -1.0
+                    //leftFlywheelMotor.velocity = -1.0
+                    //rightFlywheelMotor.velocity = -1.0
                     return false
                 } else return true
             }
@@ -196,8 +196,8 @@ class InOuttake private constructor(hardwareMap: HardwareMap, initData: InitData
             override fun run(p: TelemetryPacket): Boolean {
                 p.put("Spun Up?", spunUp)
 
-                leftFlywheelMotor.velocity = distance.velocity
-                rightFlywheelMotor.velocity = distance.velocity
+                //leftFlywheelMotor.velocity = distance.velocity
+                //rightFlywheelMotor.velocity = distance.velocity
 
                 val averageVelocity = (leftFlywheelMotor.velocity + rightFlywheelMotor.velocity) / 2
                 if (!spunUp && abs(averageVelocity - distance.velocity) < 25) {
@@ -211,8 +211,8 @@ class InOuttake private constructor(hardwareMap: HardwareMap, initData: InitData
                 // We are spun up, now monitor for big loss in velocity
                 if ((lastVelocity - averageVelocity) > 50.0 || timer.seconds() > 5.0) {
                     p.put("Current Speed", averageVelocity)
-                    leftFlywheelMotor.velocity = -1.0
-                    rightFlywheelMotor.velocity = -1.0
+                    //leftFlywheelMotor.velocity = -1.0
+                    //rightFlywheelMotor.velocity = -1.0
                     return false // big drop, all done, or timed out
                 }
 

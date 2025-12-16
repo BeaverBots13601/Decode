@@ -12,6 +12,12 @@ class GoBildaRGBIndicatorDriver(val indicator: Servo) {
             field = value
         }
 
+    var rawColor: Double = 0.000
+        set(value) {
+            indicator.position = value
+            field = value
+        }
+
     enum class Color(val servoPos: Double) {
         OFF(0.0),
         RED(0.277),

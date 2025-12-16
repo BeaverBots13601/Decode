@@ -31,7 +31,7 @@ class AxonDriver(
 
     // region Encoder tracking
     var initDelta: Double = run {
-        Thread.sleep(1000)
+        Thread.sleep(1000) // Have to do this to let the axon initialize and send a signal
         channel.voltage / 3.3 * 360
     }
         private set
@@ -74,7 +74,7 @@ class AxonDriver(
             }
 
             // Save the difference to a variable counting our overall rotation
-            position += trueDelta / gearRatio
+            position = trueDelta / gearRatio
             normalizedPosLastCycle = currentNormalizedPosition
 
             runCatching { Thread.sleep(50) }
@@ -116,6 +116,7 @@ class AxonDriver(
         val overridePower = overridePower // get a local copy to avoid concurrency issues
         if (overridePower != null) {
             axonServo.power = overridePower
+            return
         }
 
         if (targetPosition != pastTargetPosition) {
@@ -149,9 +150,11 @@ class AxonDriver(
 
         lastError = error
 
-        telemetry.addData("($axonServoName) PID Position", position)
-        telemetry.addData("($axonServoName) PID Target", targetPosition)
-        telemetry.addData("($axonServoName) PID Error", error)
+        // Divide by gearRatio so user expected values match up
+        telemetry.addData("($axonServoName) PID Position", position / gearRatio)
+        telemetry.addData("($axonServoName) PID Normalized Position", position)
+        telemetry.addData("($axonServoName) PID Target", targetPosition / gearRatio)
+        telemetry.addData("($axonServoName) PID Error", error / gearRatio)
         telemetry.addData("($axonServoName) PID Power", out)
 
         timer.reset()
@@ -176,7 +179,10 @@ class AxonDriver(
      * Set to null to disable override control.
      */
     var overridePower: Double? = null
-        set(_) = loop()
+        set(it) {
+            field = it
+            loop()
+        }
     // endregion
 
     fun cleanUp() = thread.interrupt()
