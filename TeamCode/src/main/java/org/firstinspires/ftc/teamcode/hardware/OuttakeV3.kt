@@ -37,7 +37,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     private val rightIndicatorLED = GoBildaRGBIndicatorDriver(hardwareMap.servo.get("rightIndicatorLED"))
 
     // Flywheel
-    private val flywheel = PIDVelocityController(
+    val flywheel = PIDVelocityController(
         createDefaultMotor(hardwareMap, "flywheel").apply {
             direction = DcMotorSimple.Direction.REVERSE
         },
@@ -58,7 +58,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     }
 
     // Turntable
-    private val turntableAxon = AxonDriver(
+    val turntableAxon = AxonDriver(
         hardwareMap,
         "turntableAxon",
         "turntableEncoder",
@@ -321,17 +321,27 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     fun launch(): Action {
         return SequentialAction(
             // bring artifact to top (launches one if in top)
-            InstantAction { locker.position = LockerPosition.NOT_LOCK.pos },
             InstantAction { transferOn() },
             waitUntilLaunched(1.0), // times out when nothing in transfer
             // launch top artifact
             InstantAction { leftKicker.position = LeftKickerPosition.KICK.pos },
             InstantAction { rightKicker.position = RightKickerPosition.KICK.pos },
-            SleepAction(0.5),
+            SleepAction(1.0),
             InstantAction { leftKicker.position = LeftKickerPosition.NOT_KICK.pos },
             InstantAction { rightKicker.position = RightKickerPosition.NOT_KICK.pos },
             InstantAction { transferOff() },
-            InstantAction { locker.position = LockerPosition.LOCK.pos },
+            // fixme: launches two
+        )
+    }
+
+    fun launchWithoutKicker(): Action {
+        return SequentialAction(
+            // bring artifact to top (launches one if in top)
+            InstantAction { transferOn() },
+            waitUntilLaunched(1.0), // times out when nothing in transfer
+            // launch top artifact
+            SleepAction(0.5),
+            InstantAction { transferOff() },
             // fixme: launches two
         )
     }
@@ -415,6 +425,16 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
     }
 
+    fun compositionLaunchWithoutKicker(distance: LaunchDistance): Action {
+        return ParallelAction(
+            spinUpUntilLaunched(distance),
+            SequentialAction(
+                waitForSpunUp(distance),
+                launchWithoutKicker(),
+            )
+        )
+    }
+
     fun compositionLaunch(distance: LaunchDistance): Action {
         return ParallelAction(
             spinUpUntilLaunched(distance),
@@ -426,24 +446,35 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     }
 
     fun launchAllHeld(distance: LaunchDistance): Action {
-        val numArtifacts = artifacts.artifactsHeld
+        val numArtifacts = 3/*artifacts.artifactsHeld*/
 
         if (numArtifacts == 0) return InstantAction {}
 
-        if (numArtifacts == 1) return compositionLaunch(distance)
-
-        if (numArtifacts == 2) return SequentialAction(
-            compositionLaunch(distance),
+        if (numArtifacts == 1) return SequentialAction(
+            InstantAction { locker.position = LockerPosition.NOT_LOCK.pos },
             SleepAction(0.5),
             compositionLaunch(distance),
+            InstantAction { locker.position = LockerPosition.LOCK.pos },
+        )
+
+        if (numArtifacts == 2) return SequentialAction(
+            InstantAction { locker.position = LockerPosition.NOT_LOCK.pos },
+            SleepAction(0.5),
+            compositionLaunchWithoutKicker(distance),
+            SleepAction(0.5),
+            compositionLaunch(distance),
+            InstantAction { locker.position = LockerPosition.LOCK.pos },
         )
 
         if (numArtifacts == 3) return SequentialAction(
-            compositionLaunch(distance),
+            InstantAction { locker.position = LockerPosition.NOT_LOCK.pos },
+            SleepAction(0.5),
+            compositionLaunchWithoutKicker(distance),
+            SleepAction(0.5),
+            compositionLaunchWithoutKicker(distance),
             SleepAction(0.5),
             compositionLaunch(distance),
-            SleepAction(0.5),
-            compositionLaunch(distance),
+            InstantAction { locker.position = LockerPosition.LOCK.pos },
         )
 
         RobotLog.ee("OuttakeV2", "Impossible Case! Aaa!")
@@ -456,8 +487,9 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             private val timer = ElapsedTime()
             override fun run(p: TelemetryPacket): Boolean {
                 if (firstRun) {
+                    intakeActive = false
                     toggleIntake()
-                    transferOff()
+                    transferOn()
                     timer.reset()
                     firstRun = false
                 }
@@ -469,6 +501,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
                     artifacts.intake(detectedArtifact)
                     transferOn()
 
+                    intakeActive = false // horrible hack ima lms
                     toggleIntake()
                     return false
                 }

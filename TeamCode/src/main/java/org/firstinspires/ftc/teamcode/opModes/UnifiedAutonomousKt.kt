@@ -9,9 +9,11 @@ import com.acmerobotics.roadrunner.SleepAction
 import com.acmerobotics.roadrunner.Vector2d
 import com.acmerobotics.roadrunner.ftc.runBlocking
 import com.qualcomm.hardware.limelightvision.Limelight3A
+import com.qualcomm.hardware.lynx.LynxModule
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.Disabled
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
+import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
 import org.firstinspires.ftc.teamcode.hardware.OuttakeV3
@@ -57,7 +59,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         val routeParameters: RouteParameters = when(currentLocation) {
             Locations.BlueFar -> { // canonical far
                 RouteParameters(
-                    Pose2d(60.0, -20.0, (-17 * PI) / 18),
+                    Pose2d(-12.0, -12.0, (-25 * PI) / 32),
                     OuttakeV3.LaunchDistance.CLOSE_PEAK,
                     ArtifactPositions.BLUE_FAR,
                     ArtifactPositions.BLUE_MID,
@@ -68,7 +70,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
             Locations.RedFar -> { // blue far but rotated
                 RouteParameters(
-                    Pose2d(60.0, 20.0, (17 * PI) / 18),
+                    Pose2d(-12.0, 12.0, (3 * PI) / 4),
                     OuttakeV3.LaunchDistance.CLOSE_PEAK,
                     ArtifactPositions.RED_FAR,
                     ArtifactPositions.RED_MID,
@@ -170,12 +172,12 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 firstArtifact.build(),
                 out.intakeUntilDetectedOrTimeout()
             ),
-            SleepAction(1.0),
+            SleepAction(0.5),
             ParallelAction(
                 secondArtifact.build(),
                 out.intakeUntilDetectedOrTimeout()
             ),
-            SleepAction(1.0),
+            SleepAction(0.5),
             ParallelAction(
                 thirdArtifact.build(),
                 out.intakeUntilDetectedOrTimeout()
@@ -190,12 +192,12 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 fourArtifact.build(),
                 out.intakeUntilDetectedOrTimeout()
             ),
-            SleepAction(1.0),
+            SleepAction(0.5),
             ParallelAction(
                 fiveArtifact.build(),
                 out.intakeUntilDetectedOrTimeout()
             ),
-            SleepAction(1.0),
+            SleepAction(0.5),
             ParallelAction(
                 sixArtifact.build(),
                 out.intakeUntilDetectedOrTimeout()
@@ -210,12 +212,12 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 sevenArtifact.build(),
                 out.intakeUntilDetectedOrTimeout()
             ),
-            SleepAction(1.0),
+            SleepAction(0.5),
             ParallelAction(
                 eightArtifact.build(),
                 out.intakeUntilDetectedOrTimeout()
             ),
-            SleepAction(1.0),
+            SleepAction(0.50),
             ParallelAction(
                 nineArtifact.build(),
                 out.intakeUntilDetectedOrTimeout()
@@ -229,8 +231,15 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         waitForStart() // setup done actually do things
 
         out.start()
+        out.toggleIntake()
         limelight?.start()
 
+        val thread = Thread {
+            while (!Thread.currentThread().isInterrupted) {
+                out.flywheel.setVelocity(launchDistance.velocity)
+                out.turntableAxon.targetPosition = 0.0
+            }
+        }.apply { start() }
 
         runBlocking(toLaunchAction)
         runBlocking(out.launchAllHeld(launchDistance))
@@ -244,6 +253,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
         out.stop()
         limelight?.stop()
+        thread.interrupt()
 
         blackboard["robotHeading"] = roadrunnerDrive.localizer.pose.heading.toDouble()
     }
@@ -306,4 +316,18 @@ class RedCloseAutonomousKt : UnifiedAutonomousKt() {
 @Autonomous(name = "Red Far Autonomous", group = "Competition", preselectTeleOp = "Red TeleOp Controls (Robot)")
 class RedFarAutonomousKt : UnifiedAutonomousKt() {
     override val currentLocation = Locations.RedFar
+}
+
+
+
+/**
+ * Enables bulk reads which allow faster hardware call times.
+ * Set to auto currently but if speed becomes an issue this can be manually configured.
+ * TODO: Temporary hack :(
+ */
+fun initBulkReads(hardwareMap: HardwareMap){
+    val allHubs = hardwareMap.getAll(LynxModule::class.java)
+    for (hub in allHubs) {
+        hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO)
+    }
 }
