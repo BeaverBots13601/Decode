@@ -11,7 +11,6 @@
             <!-- Outtake -->
             <ContinuousRotationServo name="turntableAxon" port="5" />
             <Servo name="locker" port="2" />
-            <ContinuousRotationServo name="transferServo" port="0" />
             <Servo name="leftKickerServo" port="4" />
 
             <!-- Axon Encoders -->
