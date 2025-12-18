@@ -84,7 +84,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             Locations.BlueClose -> { // canonical close
                 RouteParameters(
                     Pose2d(-24.0, -24.0, -3 * PI / 4),
-                    OuttakeV3.LaunchDistance.CLOSE,
+                    OuttakeV3.LaunchDistance.CLOSE_PEAK,
                     ArtifactPositions.BLUE_CLOSE,
                     ArtifactPositions.BLUE_MID,
                     ArtifactPositions.BLUE_FAR,
@@ -95,7 +95,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             Locations.RedClose -> { // blue close but rotated
                 RouteParameters(
                     Pose2d(-24.0, 24.0, 3 * PI / 4),
-                    OuttakeV3.LaunchDistance.CLOSE,
+                    OuttakeV3.LaunchDistance.CLOSE_PEAK,
                     ArtifactPositions.RED_CLOSE,
                     ArtifactPositions.RED_MID,
                     ArtifactPositions.RED_FAR,
@@ -230,21 +230,26 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         telemetry.addData("INIT STATUS", "READY")
         telemetry.update()
 
-        waitForStart() // setup done actually do things
-
-        out.start()
-        out.toggleIntake()
-        limelight?.start()
-
         val thread = Thread {
             while (!Thread.currentThread().isInterrupted) {
                 out.flywheel.setVelocity(launchDistance.velocity)
                 out.turntableAxon.targetPosition = 0.0
+                telemetry.addData("Flywheel Velocity", out.flywheel.velocity)
+                telemetry.update()
             }
-        }.apply { start() }
+        }
 
-        runBlocking(SleepAction(5000.0))
+        waitForStart() // setup done actually do things
+
+        out.start()
+        limelight?.start()
+
+        thread.start()
+
+        runBlocking(SleepAction(3.0))
         runBlocking(toLaunchAction)
+        out.transferOn()
+        out.toggleIntake()
         runBlocking(out.launchAllHeld(launchDistance))
         runBlocking(firstGroup)
         runBlocking(out.launchAllHeld(launchDistance))
@@ -266,7 +271,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         BlueClose(TeamColor.BLUE, Pose2d(-55.5, -50.0, PI / 2)),
         BlueFar(TeamColor.BLUE, Pose2d(63.0, -24.0, -PI)),
 //        RedClose(TeamColor.RED, Pose2d(-55.0, 50.0, 3 * PI / 4)),
-        RedClose(TeamColor.RED, Pose2d(-80.0, 50.0, -PI / 2)),
+        RedClose(TeamColor.RED, Pose2d(-85.0, 50.0, -PI / 2)),
         RedFar(TeamColor.RED, Pose2d(63.0, 24.0, -PI)),
         Unknown(TeamColor.UNKNOWN, Pose2d(0.0, 0.0, 0.0)),
     }

@@ -332,13 +332,14 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             // bring artifact to top (launches one if in top)
             InstantAction { transferOn() },
             waitUntilLaunched(1.0), // times out when nothing in transfer
+            SleepAction(1.0),
             // launch top artifact
             InstantAction { leftKicker.position = LeftKickerPosition.KICK.pos },
             InstantAction { rightKicker.position = RightKickerPosition.KICK.pos },
             SleepAction(1.0),
             InstantAction { leftKicker.position = LeftKickerPosition.NOT_KICK.pos },
             InstantAction { rightKicker.position = RightKickerPosition.NOT_KICK.pos },
-            InstantAction { transferOff() },
+            InstantAction { transferOn() },
             // fixme: launches two
         )
     }
@@ -350,7 +351,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             waitUntilLaunched(1.0), // times out when nothing in transfer
             // launch top artifact
             SleepAction(0.5),
-            InstantAction { transferOff() },
+            InstantAction { transferOn() },
             // fixme: launches two
         )
     }
@@ -369,7 +370,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
                 flywheel.setVelocity(distance.velocity)
 
                 val averageVelocity = flywheel.velocity
-                if (!spunUp && abs(abs(averageVelocity) - distance.velocity) < 50) {
+                if (!spunUp && abs(abs(averageVelocity) - distance.velocity) < 100) {
                     spunUp = true
                     timer.reset()
                 } else if (!spunUp) {
@@ -394,7 +395,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     /**
      * Spins up the flywheel until launched, or until 2.5 seconds have passed after being spun up.
      */
-    fun spinUpUntilLaunched(distance: LaunchDistance) = spinUpUntilLaunched(distance, 2.5)
+    fun spinUpUntilLaunched(distance: LaunchDistance) = spinUpUntilLaunched(distance, 1.0)
 
     /**
      * Watches the flywheel until launched, or until 2.5 seconds have passed.
@@ -581,7 +582,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     // region Enums
     enum class LaunchDistance(val velocity: Double) {
-        FAR(1200.0),
+        FAR(1150.0),
         CLOSE_FAR(1100.0),
         CLOSE_PEAK(900.0),
         CLOSE(750.0),
