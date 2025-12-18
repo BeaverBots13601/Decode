@@ -98,7 +98,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     private val artifacts = ArtifactData()
     override fun run(data: RunData) {
         // !!! EMERGENCY !!!
-        if (data.currentGamepadTwo.ps) {
+        if (data.currentGamepadTwo.ps && false) {
             if (data.currentGamepadTwo.dpad_down) {
                 flywheel.setVelocity(-1000000.0)
             } else if (data.currentGamepadTwo.dpad_up) {
@@ -121,17 +121,19 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
 
         // Artifact detection
-        val detectedArtifact = detectArtifact(intakeColorSensor.normalizedColors)
+        val colors = intakeColorSensor.normalizedColors
+        telemetry.addData("Raw Blue", colors.blue)
+        telemetry.addData("Raw Green", colors.green)
+        telemetry.addData("Raw Red", colors.red)
+        val detectedArtifact = detectArtifact(colors)
         telemetry.addData("Detected Artifact", detectedArtifact)
 
-        if (artifacts.midArtifact == ArtifactColors.NONE && detectedArtifact != ArtifactColors.NONE) {
-            // Assume a artifact has moved in
-            artifacts.midArtifact = detectedArtifact
-        } else if (artifacts.midArtifact != ArtifactColors.NONE && detectedArtifact == ArtifactColors.NONE) {
+        if (artifacts.midArtifact != ArtifactColors.NONE && detectedArtifact == ArtifactColors.NONE) {
             // Assume a artifact has moved to top
             artifacts.topArtifact = artifacts.midArtifact
-            artifacts.midArtifact = ArtifactColors.NONE
         }
+
+        artifacts.midArtifact = detectedArtifact
 
         telemetry.addData("Top Artifact", artifacts.topArtifact)
         telemetry.addData("Mid Artifact", artifacts.midArtifact)
@@ -172,12 +174,13 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
 
         // Lock
+        if (data.currentGamepadTwo.optionsWasPressed()) {
+            locker.position = LockerPosition.LOCK.pos
+        }
+
+        // Unlock
         if (data.currentGamepadTwo.shareWasPressed()) {
-            if (locker.position == LockerPosition.LOCK.pos) {
-                locker.position = LockerPosition.NOT_LOCK.pos
-            } else {
-                locker.position = LockerPosition.LOCK.pos
-            }
+            locker.position = LockerPosition.NOT_LOCK.pos
         }
 
         // Flywheels (on trigger)
@@ -208,10 +211,21 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         telemetry.addData("Current Velocity (tps)", flywheel.velocity)
 
         // Turret angling
+        var power = 0.0
         if (data.currentGamepadTwo.left_bumper) {
-            turntableAxon.overridePower = 0.2
+            power = 0.2
         } else if (data.currentGamepadTwo.right_bumper) {
-            turntableAxon.overridePower = -0.2
+            power = -0.2
+        }
+
+        if (data.currentGamepadTwo.psWasPressed()) {
+            turntableLocked = !turntableLocked
+        }
+
+        telemetry.addData("Turntable Auto-gimballing Disabled", turntableLocked)
+
+        if (turntableLocked || power != 0.0) {
+            turntableAxon.overridePower = power
         } else {
             turntableAxon.overridePower = null // let the control loop below handle it
 
@@ -230,6 +244,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             rotateTurretByDelta(delta)
         }
     }
+    private var turntableLocked = false
 
     override fun stop() {
         turntableAxon.cleanUp()
