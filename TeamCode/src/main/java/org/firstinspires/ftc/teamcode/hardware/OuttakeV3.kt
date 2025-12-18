@@ -75,6 +75,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     // Transfer
     private val leftKicker = hardwareMap.servo.get("leftKickerServo")
     private val rightKicker = hardwareMap.servo.get("rightKickerServo")
+    private val transfer = hardwareMap.crservo.get("transferServo")
 
     init {
         leftKicker.position = LeftKickerPosition.NOT_KICK.pos
@@ -140,6 +141,10 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             toggleIntake()
         } else if (data.currentGamepadOne.squareWasPressed()) {
             toggleIntake()
+        }
+
+        if (data.currentGamepadTwo.triangleWasPressed()) {
+            toggleTransfer()
         }
 
         // Setting launch distance
@@ -236,6 +241,27 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
     }
 
+    private var transferActive = false
+    fun toggleTransfer() {
+        if (transferActive) {
+            transfer.power = 0.0
+            transferActive = false
+        } else {
+            transfer.power = 1.0
+            transferActive = true
+        }
+    }
+
+    fun transferOff() {
+        transfer.power = 0.0
+        transferActive = false
+    }
+
+    fun transferOn() {
+        transfer.power = 1.0
+        transferActive = true
+    }
+
     private fun setLEDs(display: ArtifactColors) {
         // Left indicates velocity
         val velocity = flywheel.velocity
@@ -295,12 +321,15 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     fun launch(): Action {
         return SequentialAction(
             // bring artifact to top (launches one if in top)
+            InstantAction { transferOn() },
+            waitUntilLaunched(1.0), // times out when nothing in transfer
             // launch top artifact
             InstantAction { leftKicker.position = LeftKickerPosition.KICK.pos },
             InstantAction { rightKicker.position = RightKickerPosition.KICK.pos },
             SleepAction(1.0),
             InstantAction { leftKicker.position = LeftKickerPosition.NOT_KICK.pos },
             InstantAction { rightKicker.position = RightKickerPosition.NOT_KICK.pos },
+            InstantAction { transferOff() },
             // fixme: launches two
         )
     }
@@ -308,9 +337,11 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     fun launchWithoutKicker(): Action {
         return SequentialAction(
             // bring artifact to top (launches one if in top)
+            InstantAction { transferOn() },
             waitUntilLaunched(1.0), // times out when nothing in transfer
             // launch top artifact
             SleepAction(0.5),
+            InstantAction { transferOff() },
             // fixme: launches two
         )
     }
@@ -458,6 +489,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
                 if (firstRun) {
                     intakeActive = false
                     toggleIntake()
+                    transferOn()
                     timer.reset()
                     firstRun = false
                 }
@@ -467,6 +499,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
                 if ((artifacts.midArtifact == ArtifactColors.NONE && detectedArtifact != ArtifactColors.NONE)
                     || timer.seconds() > 1.5) {
                     artifacts.intake(detectedArtifact)
+                    transferOn()
 
                     intakeActive = false // horrible hack ima lms
                     toggleIntake()
