@@ -59,8 +59,9 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         val routeParameters: RouteParameters = when(currentLocation) {
             Locations.BlueFar -> { // canonical far
                 RouteParameters(
-                    Pose2d(-12.0, -12.0, (-25 * PI) / 32),
-                    OuttakeV3.LaunchDistance.CLOSE_PEAK,
+                    //Pose2d(-12.0, -12.0, (-25 * PI) / 32),
+                    Pose2d(50.0, -12.0, (-28 * PI) / 32),
+                    OuttakeV3.LaunchDistance.FAR,
                     ArtifactPositions.BLUE_FAR,
                     ArtifactPositions.BLUE_MID,
                     ArtifactPositions.BLUE_CLOSE,
@@ -70,8 +71,9 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
             Locations.RedFar -> { // blue far but rotated
                 RouteParameters(
-                    Pose2d(-12.0, 12.0, (3 * PI) / 4),
-                    OuttakeV3.LaunchDistance.CLOSE_PEAK,
+                    //Pose2d(-12.0, 12.0, (3 * PI) / 4),
+                    Pose2d(50.0, 12.0, (3 * PI) / 4),
+                    OuttakeV3.LaunchDistance.FAR,
                     ArtifactPositions.RED_FAR,
                     ArtifactPositions.RED_MID,
                     ArtifactPositions.RED_CLOSE,
@@ -241,6 +243,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             }
         }.apply { start() }
 
+        runBlocking(SleepAction(5000.0))
         runBlocking(toLaunchAction)
         runBlocking(out.launchAllHeld(launchDistance))
         runBlocking(firstGroup)

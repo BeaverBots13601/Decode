@@ -12,14 +12,15 @@ import org.firstinspires.ftc.teamcode.misc.PIDVelocityController
 
 @TeleOp
 @Config
-class TurretCalibrationOpmode : LinearOpMode() {
+class FlywheelCalibrationOpmode : LinearOpMode() {
     override fun runOpMode() {
         val telemetry = MultipleTelemetry(this.telemetry, FtcDashboard.getInstance().telemetry)
+        val fmMotor = hardwareMap.get(DcMotorEx::class.java, "flywheel").apply {
+            direction = DcMotorSimple.Direction.REVERSE
+            mode = DcMotor.RunMode.RUN_USING_ENCODER
+        }
         val flywheel = PIDVelocityController(
-            hardwareMap.get(DcMotorEx::class.java, "flywheel").apply {
-                direction = DcMotorSimple.Direction.REVERSE
-                mode = DcMotor.RunMode.RUN_USING_ENCODER
-            },
+            fmMotor,
             0.0175,
             0.000002,
             0.00001,
@@ -28,20 +29,24 @@ class TurretCalibrationOpmode : LinearOpMode() {
         val intakeMotor = hardwareMap.get(DcMotorEx::class.java, "intakeMotor").apply {
             direction = DcMotorSimple.Direction.REVERSE
         }
-        val transfer = hardwareMap.crservo.get("transferServo")
         val locker = hardwareMap.servo.get("locker")
 
         waitForStart()
-        intakeMotor.power = 0.8
-        transfer.power = 1.0
+        intakeMotor.power = 0.0
         locker.position = 0.55
         while (!isStopRequested) {
-            flywheel.setVelocity(SPEED)
+            if (POWER != 0.0) {
+                fmMotor.power = POWER
+                telemetry.addData("(Motor) PID Velocity", fmMotor.velocity)
+            } else {
+                flywheel.setVelocity(SPEED)
+            }
             telemetry.update()
         }
     }
 
     companion object {
         @JvmField var SPEED = 0.0
+        @JvmField var POWER = 0.0
     }
 }

@@ -62,7 +62,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         hardwareMap,
         "turntableAxon",
         "turntableEncoder",
-        0.0,
+        -0.001,
         0.0,
         0.0,
         telemetry,
@@ -139,21 +139,27 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         // Intaking
         if (data.currentGamepadTwo.squareWasPressed()) {
             toggleIntake()
+            toggleTransfer()
         } else if (data.currentGamepadOne.squareWasPressed()) {
             toggleIntake()
-        }
-
-        if (data.currentGamepadTwo.triangleWasPressed()) {
             toggleTransfer()
         }
 
         // Setting launch distance
-        if (data.currentGamepadTwo.optionsWasPressed()) {
-            currentLaunchDistance = if (currentLaunchDistance == LaunchDistance.CLOSE_PEAK) {
-                LaunchDistance.CLOSE
-            } else {
-                LaunchDistance.CLOSE_PEAK
-            }
+        if (data.currentGamepadTwo.dpadUpWasPressed()) {
+            currentLaunchDistance = LaunchDistance.FAR
+        }
+
+        if (data.currentGamepadTwo.dpadRightWasPressed()) {
+            currentLaunchDistance = LaunchDistance.CLOSE_PEAK
+        }
+
+        if (data.currentGamepadTwo.dpadDownWasPressed()) {
+            currentLaunchDistance = LaunchDistance.CLOSE
+        }
+
+        if (data.currentGamepadTwo.dpadLeftWasPressed()) {
+            currentLaunchDistance = LaunchDistance.CLOSE_FAR
         }
 
         setLEDs(artifacts.topArtifact)
@@ -163,6 +169,15 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             DriveTrainKt.getInstance()
                 ?.setDriveMotors(arrayOf(0.0, 0.0, 0.0, 0.0), RunMode.RUN_USING_ENCODER)
             runBlocking(launch())
+        }
+
+        // Lock
+        if (data.currentGamepadTwo.shareWasPressed()) {
+            if (locker.position == LockerPosition.LOCK.pos) {
+                locker.position = LockerPosition.NOT_LOCK.pos
+            } else {
+                locker.position = LockerPosition.LOCK.pos
+            }
         }
 
         // Flywheels (on trigger)
@@ -207,7 +222,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
                 null // Not attached; do nothing
             } else if (depotTag != null) {
                 -depotTag.position.x * 90 // negative! because positive is left by default
-            } else 90.0 // rotate to find the tag
+            } else 0.0 // rotate to find the tag
 
             telemetry.addData("Delta", delta)
 
@@ -267,22 +282,16 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         val velocity = flywheel.velocity
         val target = if (CUSTOM != 0.0) CUSTOM else currentLaunchDistance.velocity
 
-        if (abs(velocity - target) < 100) {
-            leftIndicatorLED.color = Color.GREEN
-        } else {
-            leftIndicatorLED.color = Color.OFF
-        }
-
-        return
-
-        if(velocity > 500.0) {
+        if(abs(velocity - target) < 100) {
 //            val error = abs(velocity - target) / target
 //            val color = 0.277 + (0.233 * (1 - error)) // range from red to green
 //            leftIndicatorLED.rawColor = color
+            leftIndicatorLED.color = Color.GREEN
         } else {
             leftIndicatorLED.color = Color.OFF // off
         }
 
+        // Right indicates expected color
         when (display) {
             ArtifactColors.GREEN -> {
                 rightIndicatorLED.color = Color.GREEN
@@ -308,10 +317,10 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             return
         }
         // this may underflow or overflow so we're always in [-180, 180]
-        var target = PoseKt.normalizeAngleDeg(turntableAxon.normalizedPosition + delta)
+        var target = PoseKt.normalizeAngleDeg(turntableAxon.position + delta)
 
         // also clamp to [-110, 130] to meet hardware requirements (too much overshoot allowance?)
-        target = clamp(target, -440.0, 520.0)
+        target = clamp(target, -135.0, 135.0)
 
         turntableAxon.targetPosition = target
     }
@@ -572,6 +581,8 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     // region Enums
     enum class LaunchDistance(val velocity: Double) {
+        FAR(1200.0),
+        CLOSE_FAR(1100.0),
         CLOSE_PEAK(900.0),
         CLOSE(750.0),
     }
@@ -579,13 +590,6 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     enum class ArtifactColors {
         PURPLE,
         GREEN,
-        NONE,
-    }
-
-    enum class Position {
-        LEFT,
-        RIGHT,
-        LOWER,
         NONE,
     }
 

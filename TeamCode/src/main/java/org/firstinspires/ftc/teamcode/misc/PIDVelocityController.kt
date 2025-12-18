@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.misc
 
 import com.acmerobotics.dashboard.config.Config
+import com.acmerobotics.roadrunner.clamp
 import com.qualcomm.robotcore.hardware.DcMotor.RunMode
 import com.qualcomm.robotcore.hardware.DcMotorEx
 import com.qualcomm.robotcore.util.ElapsedTime
@@ -47,11 +48,13 @@ class PIDVelocityController(
         val derivative = (error - lastError) / timer.seconds() // rate of change of error
 
         @Suppress("RedundantCompanionReference") // Incorrect error
-        val out = if (USE_TUNABLE_VALUES) {
+        var out = if (USE_TUNABLE_VALUES) {
             (Companion.kP * error) + (Companion.kI * integralSum) + (Companion.kD * derivative)
         } else {
             (kP * error) + (kI * integralSum) + (kD * derivative)
         }
+
+        out = clamp(out, -1.0, 1.0)
 
         motor.power = out
 

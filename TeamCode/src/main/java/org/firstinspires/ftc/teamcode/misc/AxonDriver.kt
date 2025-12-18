@@ -41,12 +41,11 @@ class AxonDriver(
      *
      * Equivalent to [DcMotor.getCurrentPosition()][com.qualcomm.robotcore.hardware.DcMotor.getCurrentPosition]
      */
-    @Deprecated("Warning! This is broken except for internal use! Do not use it yet!")
     var position: Double = 0.0 // initializer not quite working
         private set
 
     private var thread = Thread {
-        var normalizedPosLastCycle = normalizedPosition
+        var normalizedPosLastCycle = internalNormalizedPosition
         val timer = ElapsedTime()
         while (!Thread.currentThread().isInterrupted) {
             if (timer.milliseconds() > 250 && !warningMessageSet){
@@ -60,7 +59,7 @@ class AxonDriver(
             }
             timer.reset()
 
-            val currentNormalizedPosition = normalizedPosition
+            val currentNormalizedPosition = internalNormalizedPosition
             // Determine the delta between the current position and the previous position
             val normalizedDelta = currentNormalizedPosition - normalizedPosLastCycle
 
@@ -74,7 +73,7 @@ class AxonDriver(
             }
 
             // Save the difference to a variable counting our overall rotation
-            position = trueDelta / gearRatio
+            position += trueDelta / gearRatio
             normalizedPosLastCycle = currentNormalizedPosition
 
             runCatching { Thread.sleep(50) }
@@ -84,7 +83,7 @@ class AxonDriver(
     /**
      * The rotational difference between the starting and current positions, normalized between [-180, 180)
      */
-    val normalizedPosition: Double
+    private val internalNormalizedPosition: Double
         get() {
             // Get the absolute rotation (pos relative to 0deg as of last reset) (anywhere between [-360, 360])
             val absolutePos = (channel.voltage / 3.3 * 360) - initDelta
@@ -92,6 +91,11 @@ class AxonDriver(
             // I don't even know ChatGPT did this
             val a = (((absolutePos % 360) + 360) % 360) // ensure the result is in [-180, 180)
             return PoseKt.normalizeAngleDeg(a)
+        }
+
+    val normalizedPosition: Double
+        get() {
+            return PoseKt.normalizeAngleDeg(position)
         }
 
     val rawPosition: Double
@@ -134,7 +138,7 @@ class AxonDriver(
             return
         }
 
-        val position = normalizedPosition
+        val position = internalNormalizedPosition
         val error = targetPosition - position
 
         integralSum += (error * timer.seconds()) // sum of all error over time
