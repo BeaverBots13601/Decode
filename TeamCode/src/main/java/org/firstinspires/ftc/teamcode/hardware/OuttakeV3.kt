@@ -58,15 +58,16 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     }
 
     // Turntable
+    val gearRatio = -11.0 / 3.0
     val turntableAxon = AxonDriver(
         hardwareMap,
         "turntableAxon",
         "turntableEncoder",
         -0.001,
         0.0,
-        0.0,
+        0.0000005,
         telemetry,
-        -109.0 / 30.0,
+        gearRatio,
     )
 
     // Limelight
@@ -164,7 +165,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             currentLaunchDistance = LaunchDistance.CLOSE_FAR
         }
 
-        setLEDs(artifacts.topArtifact)
+        setLEDs(detectedArtifact)
 
         // Fire!
         if (data.currentGamepadTwo.crossWasPressed()) {
@@ -335,40 +336,36 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         var target = PoseKt.normalizeAngleDeg(turntableAxon.position + delta)
 
         // also clamp to [-110, 130] to meet hardware requirements (too much overshoot allowance?)
-        target = clamp(target, -135.0, 135.0)
+        target = clamp(target, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY)
+//        target = clamp(target, -135.0 * -gearRatio, 135.0 * -gearRatio)
 
         turntableAxon.targetPosition = target
     }
     // endregion
 
     // region Roadrunner Actions
+    /**
+     * Launch smartly, deciding whether a kick or a intake launch is required
+     */
     fun launch(): Action {
-        return SequentialAction(
-            // bring artifact to top (launches one if in top)
-            InstantAction { transferOn() },
-            waitUntilLaunched(1.0), // times out when nothing in transfer
-            SleepAction(1.0),
-            // launch top artifact
-            InstantAction { leftKicker.position = LeftKickerPosition.KICK.pos },
-            InstantAction { rightKicker.position = RightKickerPosition.KICK.pos },
-            SleepAction(1.0),
-            InstantAction { leftKicker.position = LeftKickerPosition.NOT_KICK.pos },
-            InstantAction { rightKicker.position = RightKickerPosition.NOT_KICK.pos },
-            InstantAction { transferOn() },
-            // fixme: launches two
-        )
-    }
-
-    fun launchWithoutKicker(): Action {
-        return SequentialAction(
-            // bring artifact to top (launches one if in top)
-            InstantAction { transferOn() },
-            waitUntilLaunched(1.0), // times out when nothing in transfer
-            // launch top artifact
-            SleepAction(0.5),
-            InstantAction { transferOn() },
-            // fixme: launches two
-        )
+        val middle = detectArtifact(intakeColorSensor.normalizedColors)
+        return if (middle == ArtifactColors.NONE) { // need to kick
+            SequentialAction(
+                InstantAction { leftKicker.position = LeftKickerPosition.KICK.pos },
+                InstantAction { rightKicker.position = RightKickerPosition.KICK.pos },
+                SleepAction(0.75),
+                InstantAction { leftKicker.position = LeftKickerPosition.NOT_KICK.pos },
+                InstantAction { rightKicker.position = RightKickerPosition.NOT_KICK.pos },
+            )
+        } else { // artifact will launch when we use the intake
+                SequentialAction(
+                // bring artifact to top (launches one if in top)
+                InstantAction { transferOn(); toggleIntake() },
+                waitUntilLaunched(1.0),
+                InstantAction { transferOff(); toggleIntake() },
+                // fixme: launches two
+            )
+        }
     }
 
     /**
@@ -450,16 +447,6 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
     }
 
-    fun compositionLaunchWithoutKicker(distance: LaunchDistance): Action {
-        return ParallelAction(
-            spinUpUntilLaunched(distance),
-            SequentialAction(
-                waitForSpunUp(distance),
-                launchWithoutKicker(),
-            )
-        )
-    }
-
     fun compositionLaunch(distance: LaunchDistance): Action {
         return ParallelAction(
             spinUpUntilLaunched(distance),
@@ -485,7 +472,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         if (numArtifacts == 2) return SequentialAction(
             InstantAction { locker.position = LockerPosition.NOT_LOCK.pos },
             SleepAction(0.5),
-            compositionLaunchWithoutKicker(distance),
+            compositionLaunch(distance),
             SleepAction(0.5),
             compositionLaunch(distance),
             InstantAction { locker.position = LockerPosition.LOCK.pos },
@@ -494,9 +481,9 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         if (numArtifacts == 3) return SequentialAction(
             InstantAction { locker.position = LockerPosition.NOT_LOCK.pos },
             SleepAction(0.5),
-            compositionLaunchWithoutKicker(distance),
+            compositionLaunch(distance),
             SleepAction(0.5),
-            compositionLaunchWithoutKicker(distance),
+            compositionLaunch(distance),
             SleepAction(0.5),
             compositionLaunch(distance),
             InstantAction { locker.position = LockerPosition.LOCK.pos },
@@ -569,9 +556,9 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     // region Utility Functions
     private fun detectArtifact(data: NormalizedRGBA): ArtifactColors {
-        return if (data.blue > 0.002 && data.blue > data.green) {
+        return if (data.blue > 0.001 && data.blue > data.green) {
             ArtifactColors.PURPLE
-        } else if (data.green > 0.002 && data.green > data.blue && data.green > data.red) {
+        } else if (data.green > 0.001 && data.green > data.blue && data.green > data.red) {
             ArtifactColors.GREEN
         } else {
             ArtifactColors.NONE
