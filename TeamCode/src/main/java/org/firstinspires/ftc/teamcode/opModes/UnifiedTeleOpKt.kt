@@ -95,6 +95,8 @@ abstract class UnifiedTeleOpKt : LinearOpMode() {
             val runData = HardwareMechanismKt.RunData(
                 currentGamepadOne,
                 currentGamepadTwo,
+                gamepad1,
+                gamepad2,
                 imuAngleRad = 0.0 // moderately safe hack to reduce cycle times
                 // how roadrunner stop so fast in manual ff tune??
             )

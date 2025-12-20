@@ -9,11 +9,9 @@ import com.acmerobotics.roadrunner.SleepAction
 import com.acmerobotics.roadrunner.Vector2d
 import com.acmerobotics.roadrunner.ftc.runBlocking
 import com.qualcomm.hardware.limelightvision.Limelight3A
-import com.qualcomm.hardware.lynx.LynxModule
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.Disabled
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
-import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
 import org.firstinspires.ftc.teamcode.hardware.OuttakeV3
@@ -72,7 +70,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             Locations.RedFar -> { // blue far but rotated
                 RouteParameters(
                     //Pose2d(-12.0, 12.0, (3 * PI) / 4),
-                    Pose2d(50.0, 12.0, (3 * PI) / 4),
+                    Pose2d(50.0, 12.0, (28 * PI) / 32),
                     OuttakeV3.LaunchDistance.FAR,
                     ArtifactPositions.RED_FAR,
                     ArtifactPositions.RED_MID,
@@ -84,6 +82,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             Locations.BlueClose -> { // canonical close
                 RouteParameters(
                     Pose2d(-24.0, -24.0, -3 * PI / 4),
+//                    Pose2d(-24.0, -24.0, -21 * PI / 32),
                     OuttakeV3.LaunchDistance.CLOSE_PEAK,
                     ArtifactPositions.BLUE_CLOSE,
                     ArtifactPositions.BLUE_MID,
@@ -95,6 +94,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             Locations.RedClose -> { // blue close but rotated
                 RouteParameters(
                     Pose2d(-24.0, 24.0, 3 * PI / 4),
+//                    Pose2d(-24.0, 24.0, 21 * PI / 32),
                     OuttakeV3.LaunchDistance.CLOSE_PEAK,
                     ArtifactPositions.RED_CLOSE,
                     ArtifactPositions.RED_MID,
@@ -129,36 +129,36 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
         val firstArtifactBefore = toLaunch.fresh()
             .strafeToLinearHeading(firstArtifactPose - (firstOffsetPose * 2.0), firstArtifactPickupHeading)
-        val firstArtifact = firstArtifactBefore.fresh()
-            .strafeToLinearHeading(firstArtifactPose + (firstOffsetPose * 2.0), firstArtifactPickupHeading)
-        val secondArtifact = firstArtifact.fresh()
-            .strafeToLinearHeading(firstArtifactPose + (firstOffsetPose * 3.0), firstArtifactPickupHeading)
-        val thirdArtifact = secondArtifact.fresh()
-            .strafeToLinearHeading(firstArtifactPose + (firstOffsetPose * 4.0), firstArtifactPickupHeading)
+//        val firstArtifact = firstArtifactBefore.fresh()
+//            .strafeToLinearHeading(firstArtifactPose + (firstOffsetPose * 2.0), firstArtifactPickupHeading)
+//        val secondArtifact = firstArtifactBefore.fresh()
+//            .strafeToLinearHeading(firstArtifactPose + (firstOffsetPose * 3.0), firstArtifactPickupHeading)
+        val thirdArtifact = firstArtifactBefore.fresh()
+            .strafeToLinearHeading(firstArtifactPose + (firstOffsetPose * 5.0), firstArtifactPickupHeading)
 
         val toLaunchTwo = thirdArtifact.fresh()
             .strafeToLinearHeading(launchPose.position, launchPose.heading)
 
         val fourArtifactBefore = toLaunchTwo.fresh()
-            .strafeToLinearHeading(fourthArtifactPose - fourthOffsetPose, fourthArtifactPickupHeading)
-        val fourArtifact = fourArtifactBefore.fresh()
-            .strafeToLinearHeading(fourthArtifactPose + (fourthOffsetPose * 2.0), fourthArtifactPickupHeading)
-        val fiveArtifact = fourArtifact.fresh()
-            .strafeToLinearHeading(fourthArtifactPose + (fourthOffsetPose * 3.0), fourthArtifactPickupHeading)
-        val sixArtifact = fiveArtifact.fresh()
-            .strafeToLinearHeading(fourthArtifactPose + (fourthOffsetPose * 4.0), fourthArtifactPickupHeading)
+            .strafeToLinearHeading(fourthArtifactPose - (fourthOffsetPose * 2.0), fourthArtifactPickupHeading)
+//        val fourArtifact = fourArtifactBefore.fresh()
+//            .strafeToLinearHeading(fourthArtifactPose + (fourthOffsetPose * 2.0), fourthArtifactPickupHeading)
+//        val fiveArtifact = fourArtifactBefore.fresh()
+//            .strafeToLinearHeading(fourthArtifactPose + (fourthOffsetPose * 3.0), fourthArtifactPickupHeading)
+        val sixArtifact = fourArtifactBefore.fresh()
+            .strafeToLinearHeading(fourthArtifactPose + (fourthOffsetPose * 5.0), fourthArtifactPickupHeading)
 
         val toLaunchThree = sixArtifact.fresh()
             .strafeToLinearHeading(launchPose.position, launchPose.heading)
 
         val seventhArtifactBefore = toLaunchThree.fresh()
-            .strafeToLinearHeading(seventhArtifactPose - seventhOffsetPose, seventhArtifactPickupHeading)
-        val sevenArtifact = seventhArtifactBefore.fresh()
-            .strafeToLinearHeading(seventhArtifactPose + (seventhOffsetPose * 2.0), seventhArtifactPickupHeading)
-        val eightArtifact = sevenArtifact.fresh()
-            .strafeToLinearHeading(seventhArtifactPose + (seventhOffsetPose * 3.0), seventhArtifactPickupHeading)
-        val nineArtifact = eightArtifact.fresh()
-            .strafeToLinearHeading(seventhArtifactPose + (seventhOffsetPose * 4.0), seventhArtifactPickupHeading)
+            .strafeToLinearHeading(seventhArtifactPose - (seventhOffsetPose * 2.0), seventhArtifactPickupHeading)
+//        val sevenArtifact = seventhArtifactBefore.fresh()
+//            .strafeToLinearHeading(seventhArtifactPose + (seventhOffsetPose * 2.0), seventhArtifactPickupHeading)
+//        val eightArtifact = seventhArtifactBefore.fresh()
+//            .strafeToLinearHeading(seventhArtifactPose + (seventhOffsetPose * 3.0), seventhArtifactPickupHeading)
+        val nineArtifact = seventhArtifactBefore.fresh()
+            .strafeToLinearHeading(seventhArtifactPose + (seventhOffsetPose * 5.0), seventhArtifactPickupHeading)
 
         val toLaunchFour = nineArtifact.fresh()
             .strafeToLinearHeading(launchPose.position, launchPose.heading)
@@ -170,16 +170,16 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         val firstGroup = SequentialAction(
             // intake more,
             firstArtifactBefore.build(),
-            ParallelAction(
-                firstArtifact.build(),
-                out.intakeUntilDetectedOrTimeout()
-            ),
-            SleepAction(0.5),
-            ParallelAction(
-                secondArtifact.build(),
-                out.intakeUntilDetectedOrTimeout()
-            ),
-            SleepAction(0.5),
+//            ParallelAction(
+//                firstArtifact.build(),
+//                out.intakeUntilDetectedOrTimeout()
+//            ),
+//            SleepAction(0.5),
+//            ParallelAction(
+//                secondArtifact.build(),
+//                out.intakeUntilDetectedOrTimeout()
+//            ),
+//            SleepAction(0.5),
             ParallelAction(
                 thirdArtifact.build(),
                 out.intakeUntilDetectedOrTimeout()
@@ -190,16 +190,16 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         val secondGroup = SequentialAction(
             // intake more,
             fourArtifactBefore.build(),
-            ParallelAction(
-                fourArtifact.build(),
-                out.intakeUntilDetectedOrTimeout()
-            ),
-            SleepAction(0.5),
-            ParallelAction(
-                fiveArtifact.build(),
-                out.intakeUntilDetectedOrTimeout()
-            ),
-            SleepAction(0.5),
+//            ParallelAction(
+//                fourArtifact.build(),
+//                out.intakeUntilDetectedOrTimeout()
+//            ),
+//            SleepAction(0.5),
+//            ParallelAction(
+//                fiveArtifact.build(),
+//                out.intakeUntilDetectedOrTimeout()
+//            ),
+//            SleepAction(0.5),
             ParallelAction(
                 sixArtifact.build(),
                 out.intakeUntilDetectedOrTimeout()
@@ -210,16 +210,16 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         val thirdGroup = SequentialAction(
             // intake more,
             seventhArtifactBefore.build(),
-            ParallelAction(
-                sevenArtifact.build(),
-                out.intakeUntilDetectedOrTimeout()
-            ),
-            SleepAction(0.5),
-            ParallelAction(
-                eightArtifact.build(),
-                out.intakeUntilDetectedOrTimeout()
-            ),
-            SleepAction(0.50),
+//            ParallelAction(
+//                sevenArtifact.build(),
+//                out.intakeUntilDetectedOrTimeout()
+//            ),
+//            SleepAction(0.5),
+//            ParallelAction(
+//                eightArtifact.build(),
+//                out.intakeUntilDetectedOrTimeout()
+//            ),
+//            SleepAction(0.50),
             ParallelAction(
                 nineArtifact.build(),
                 out.intakeUntilDetectedOrTimeout()
@@ -233,7 +233,11 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         val thread = Thread {
             while (!Thread.currentThread().isInterrupted) {
                 out.flywheel.setVelocity(launchDistance.velocity)
-                out.turntableAxon.targetPosition = 0.0
+//                if (currentLocation == Locations.RedFar || currentLocation == Locations.BlueFar) {
+//                    out.turntableAxon.targetPosition = 0.0
+//                } else {
+//                    out.rotateTurretByDelta(out.calculateTagDelta())
+//                }
                 telemetry.addData("Flywheel Velocity", out.flywheel.velocity)
                 telemetry.update()
             }
@@ -246,10 +250,13 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
         thread.start()
 
-        runBlocking(SleepAction(3.0))
+        if (currentLocation == Locations.RedFar || currentLocation == Locations.BlueFar) {
+            runBlocking(SleepAction(3.0))
+        } else {
+            runBlocking(SleepAction(1.5))
+        }
         runBlocking(toLaunchAction)
-        out.transferOn()
-        out.toggleIntake()
+        out.intakeOn()
         runBlocking(out.launchAllHeld(launchDistance))
         runBlocking(firstGroup)
         runBlocking(out.launchAllHeld(launchDistance))
@@ -272,7 +279,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         BlueFar(TeamColor.BLUE, Pose2d(63.0, -24.0, -PI)),
 //        RedClose(TeamColor.RED, Pose2d(-55.0, 50.0, 3 * PI / 4)),
         RedClose(TeamColor.RED, Pose2d(-85.0, 50.0, -PI / 2)),
-        RedFar(TeamColor.RED, Pose2d(63.0, 24.0, -PI)),
+        RedFar(TeamColor.RED, Pose2d(53.0, 24.0, -PI)),
         Unknown(TeamColor.UNKNOWN, Pose2d(0.0, 0.0, 0.0)),
     }
 
@@ -324,18 +331,4 @@ class RedCloseAutonomousKt : UnifiedAutonomousKt() {
 @Autonomous(name = "Red Far Autonomous", group = "Competition", preselectTeleOp = "Red TeleOp Controls (Robot)")
 class RedFarAutonomousKt : UnifiedAutonomousKt() {
     override val currentLocation = Locations.RedFar
-}
-
-
-
-/**
- * Enables bulk reads which allow faster hardware call times.
- * Set to auto currently but if speed becomes an issue this can be manually configured.
- * TODO: Temporary hack :(
- */
-fun initBulkReads(hardwareMap: HardwareMap){
-    val allHubs = hardwareMap.getAll(LynxModule::class.java)
-    for (hub in allHubs) {
-        hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO)
-    }
 }

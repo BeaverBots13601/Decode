@@ -104,9 +104,13 @@ class AxonDriver(
     /**
      * Resets the encoder such that we have moved 0° and are at 0° relative
      */
-    fun resetEncoder() {
+    fun reset() {
         initDelta = channel.voltage / 3.3 * 360
         position = 0.0
+        targetPosition = null
+        overridePower = null
+        warningMessageSet = false
+        RobotLog.clearGlobalWarningMsg()
     }
     // endregion
 

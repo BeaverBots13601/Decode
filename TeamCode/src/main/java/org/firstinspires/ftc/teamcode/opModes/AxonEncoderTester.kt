@@ -18,7 +18,7 @@ class AxonEncoderTester : LinearOpMode() {
             0.0,
             0.0,
             telemetry,
-            -4.0,
+            -11.0 / 3.0,
         )
 
         waitForStart()
@@ -28,7 +28,7 @@ class AxonEncoderTester : LinearOpMode() {
             } else if (gamepad1.right_bumper) {
                 axon.overridePower = -0.4
             } else if (gamepad1.x) {
-                axon.resetEncoder()
+                axon.reset()
             } else {
                 axon.overridePower = 0.0
             }

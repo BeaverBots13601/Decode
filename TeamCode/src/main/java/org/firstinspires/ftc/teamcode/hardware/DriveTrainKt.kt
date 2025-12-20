@@ -48,7 +48,7 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
 
     private var autoTrackEnabled = false
     override fun run(data: RunData) {
-        if (data.currentGamepadOne.psWasPressed()) {
+        if (false && data.currentGamepadOne.psWasPressed()) {
             autoTrackEnabled = !autoTrackEnabled
         }
 

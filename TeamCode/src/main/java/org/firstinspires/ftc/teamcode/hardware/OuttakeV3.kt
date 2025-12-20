@@ -86,10 +86,6 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     override fun start() {}
 
-    // Emergency Mode Stuff
-    private var leftRed = true
-    private val timer = ElapsedTime()
-    private var delta = 0.0
 
     // Config info
     private val teamColor = initData.teamColor
@@ -98,29 +94,6 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     private var currentLaunchDistance = LaunchDistance.CLOSE
     private val artifacts = ArtifactData()
     override fun run(data: RunData) {
-        // !!! EMERGENCY !!!
-        if (data.currentGamepadTwo.ps && false) {
-            if (data.currentGamepadTwo.dpad_down) {
-                flywheel.setVelocity(-1000000.0)
-            } else if (data.currentGamepadTwo.dpad_up) {
-                flywheel.setVelocity(1000000.0)
-            } else if (data.currentGamepadTwo.rightBumperWasPressed()) {
-                runBlocking(launch())
-            } else {
-                flywheel.setVelocity(null)
-            }
-
-            delta += timer.seconds() - delta
-            if (delta > 0.75) {
-                leftIndicatorLED.color = if (leftRed) Color.RED else Color.BLUE
-                rightIndicatorLED.color = if (leftRed) Color.BLUE else Color.RED
-                leftRed = !leftRed
-                delta = 0.0
-                timer.reset()
-            }
-            return
-        }
-
         // Artifact detection
         val colors = intakeColorSensor.normalizedColors
         telemetry.addData("Raw Blue", colors.blue)
@@ -142,10 +115,8 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         // Intaking
         if (data.currentGamepadTwo.squareWasPressed()) {
             toggleIntake()
-            toggleTransfer()
         } else if (data.currentGamepadOne.squareWasPressed()) {
             toggleIntake()
-            toggleTransfer()
         }
 
         // Setting launch distance
@@ -174,16 +145,6 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             runBlocking(launch())
         }
 
-        // Lock
-        if (data.currentGamepadTwo.optionsWasPressed()) {
-            locker.position = LockerPosition.LOCK.pos
-        }
-
-        // Unlock
-        if (data.currentGamepadTwo.shareWasPressed()) {
-            locker.position = LockerPosition.NOT_LOCK.pos
-        }
-
         // Flywheels (on trigger)
         flywheel.setVelocity(if (data.currentGamepadTwo.right_trigger < 0.5) {
             telemetry.addData("Target Velocity (tps)", 0.0)
@@ -193,19 +154,14 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             if (CUSTOM != 0.0) CUSTOM else currentLaunchDistance.velocity
         })
 
-        // region Figure out if spun up
-        val currentVelocity = flywheel.velocity
+        // Lock/Unlock
+        val flywheelSpunUp = flywheelSpunUp()
 
-        val flywheelSpunUp = if (currentVelocity > 2000) {
-            if (flywheel.velocity > 2000) {
-                true
-            } else false
-        } else {
-            if (abs(flywheel.velocity - currentVelocity) < 250) {
-                true
-            } else false
+        if (data.currentGamepadTwo.share/* || flywheelSpunUp*/) { // open if held or span up
+            locker.position = LockerPosition.NOT_LOCK.pos
+        } else { // otherwise locked
+            locker.position = LockerPosition.LOCK.pos
         }
-        // endregion
 
         telemetry.addData("Flywheel Spun Up?", flywheelSpunUp)
         telemetry.addData("Current Launch Mode", currentLaunchDistance)
@@ -219,6 +175,11 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             power = -0.2
         }
 
+        // Turret reset
+        if (data.currentGamepadTwo.optionsWasPressed()) {
+            turntableAxon.reset()
+        }
+
         if (data.currentGamepadTwo.psWasPressed()) {
             turntableLocked = !turntableLocked
         }
@@ -230,16 +191,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         } else {
             turntableAxon.overridePower = null // let the control loop below handle it
 
-            // get tags
-            val depotTag = getDepotTag()
-
-            val delta = if (limelight == null) { // find delta
-                null // Not attached; do nothing
-            } else if (depotTag != null) {
-                -depotTag.position.x * 90 // negative! because positive is left by default
-            } else 0.0 // rotate to find the tag
-
-            telemetry.addData("Delta", delta)
+            val delta = calculateTagDelta()
 
             // rotate
             rotateTurretByDelta(delta)
@@ -265,43 +217,39 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     fun toggleIntake() {
         if (intakeActive) {
             intakeMotor.power = 0.0
+            transfer.power = 0.0
             intakeActive = false
         } else {
             intakeMotor.power = 0.8
+            transfer.power = 1.0
             intakeActive = true
         }
     }
 
-    private var transferActive = false
-    fun toggleTransfer() {
-        if (transferActive) {
-            transfer.power = 0.0
-            transferActive = false
-        } else {
-            transfer.power = 1.0
-            transferActive = true
-        }
-    }
-
-    fun transferOff() {
+    fun intakeOff() {
+        intakeMotor.power = 0.0
         transfer.power = 0.0
-        transferActive = false
+        intakeActive = false
     }
 
-    fun transferOn() {
+    fun intakeOn() {
+        intakeMotor.power = 0.8
         transfer.power = 1.0
-        transferActive = true
+        intakeActive = true
+    }
+
+    fun flywheelSpunUp(): Boolean {
+        val velocity = flywheel.velocity
+        val target = if (CUSTOM != 0.0) CUSTOM else currentLaunchDistance.velocity
+
+        return if (abs(velocity - target) < 100) {
+            true
+        } else false
     }
 
     private fun setLEDs(display: ArtifactColors) {
         // Left indicates velocity
-        val velocity = flywheel.velocity
-        val target = if (CUSTOM != 0.0) CUSTOM else currentLaunchDistance.velocity
-
-        if(abs(velocity - target) < 100) {
-//            val error = abs(velocity - target) / target
-//            val color = 0.277 + (0.233 * (1 - error)) // range from red to green
-//            leftIndicatorLED.rawColor = color
+        if(flywheelSpunUp()) {
             leftIndicatorLED.color = Color.GREEN
         } else {
             leftIndicatorLED.color = Color.OFF // off
@@ -327,7 +275,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
      *
      * @param delta The delta, in degrees, from current forward on the robot. Negative is left; Positive is right.
      */
-    private fun rotateTurretByDelta(delta: Double?) {
+    fun rotateTurretByDelta(delta: Double?) {
         if (delta == null) {
             turntableAxon.targetPosition = null
             return
@@ -347,24 +295,46 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     /**
      * Launch smartly, deciding whether a kick or a intake launch is required
      */
-    fun launch(): Action {
-        val middle = detectArtifact(intakeColorSensor.normalizedColors)
-        return if (middle == ArtifactColors.NONE) { // need to kick
-            SequentialAction(
-                InstantAction { leftKicker.position = LeftKickerPosition.KICK.pos },
-                InstantAction { rightKicker.position = RightKickerPosition.KICK.pos },
-                SleepAction(0.75),
-                InstantAction { leftKicker.position = LeftKickerPosition.NOT_KICK.pos },
-                InstantAction { rightKicker.position = RightKickerPosition.NOT_KICK.pos },
-            )
-        } else { // artifact will launch when we use the intake
+    fun launch(kick: Boolean? = null): Action {
+        return when(kick) {
+            true -> {
                 SequentialAction(
-                // bring artifact to top (launches one if in top)
-                InstantAction { transferOn(); toggleIntake() },
-                waitUntilLaunched(1.0),
-                InstantAction { transferOff(); toggleIntake() },
-                // fixme: launches two
-            )
+                    InstantAction { leftKicker.position = LeftKickerPosition.KICK.pos },
+                    InstantAction { rightKicker.position = RightKickerPosition.KICK.pos },
+                    SleepAction(0.75),
+                    InstantAction { leftKicker.position = LeftKickerPosition.NOT_KICK.pos },
+                    InstantAction { rightKicker.position = RightKickerPosition.NOT_KICK.pos },
+                )
+            }
+            false -> {
+                SequentialAction(
+                    // bring artifact to top (launches one if in top)
+                    InstantAction { intakeOn() },
+                    waitUntilLaunched(1.0),
+                    //InstantAction { intakeOff() },
+                    // fixme: launches two
+                )
+            }
+            null -> {
+                val middle = detectArtifact(intakeColorSensor.normalizedColors)
+                if (middle == ArtifactColors.NONE) { // need to kick
+                    SequentialAction(
+                        InstantAction { leftKicker.position = LeftKickerPosition.KICK.pos },
+                        InstantAction { rightKicker.position = RightKickerPosition.KICK.pos },
+                        SleepAction(0.75),
+                        InstantAction { leftKicker.position = LeftKickerPosition.NOT_KICK.pos },
+                        InstantAction { rightKicker.position = RightKickerPosition.NOT_KICK.pos },
+                    )
+                } else { // artifact will launch when we use the intake
+                    SequentialAction(
+                        // bring artifact to top (launches one if in top)
+                        InstantAction { intakeOn() },
+                        waitUntilLaunched(1.0),
+                        //InstantAction { intakeOff() },
+                        // fixme: launches two
+                    )
+                }
+            }
         }
     }
 
@@ -379,7 +349,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             override fun run(p: TelemetryPacket): Boolean {
                 p.put("Spun Up?", spunUp)
 
-                flywheel.setVelocity(distance.velocity)
+                //flywheel.setVelocity(distance.velocity)
 
                 val averageVelocity = flywheel.velocity
                 if (!spunUp && abs(abs(averageVelocity) - distance.velocity) < 100) {
@@ -393,7 +363,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
                 // We are spun up, now monitor for big loss in velocity
                 if ((lastVelocity - averageVelocity) > 50.0 || timer.seconds() > timeout) {
                     p.put("Current Speed", averageVelocity)
-                    flywheel.setVelocity(null)
+                    //flywheel.setVelocity(null)
                     return false // big drop, all done, or timed out
                 }
 
@@ -427,7 +397,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
                 // Monitor for big loss in velocity
                 if ((lastVelocity - averageVelocity) > 50.0 || timer.seconds() > timeout) {
                     p.put("Current Speed", averageVelocity)
-                    flywheel.setVelocity(null)
+                    //flywheel.setVelocity(null)
                     return false // big drop & all done, or timed out
                 }
 
@@ -441,18 +411,18 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     fun waitForSpunUp(distance: LaunchDistance): Action {
         return Action {
             val averageVelocity = flywheel.velocity
-            if (abs(averageVelocity - distance.velocity) < 25) {
+            if (abs(averageVelocity - distance.velocity) < 100) {
                 false
             } else true
         }
     }
 
-    fun compositionLaunch(distance: LaunchDistance): Action {
+    fun compositionLaunch(distance: LaunchDistance, kick: Boolean? = null): Action {
         return ParallelAction(
             spinUpUntilLaunched(distance),
             SequentialAction(
                 waitForSpunUp(distance),
-                launch(),
+                launch(kick),
             )
         )
     }
@@ -465,27 +435,27 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         if (numArtifacts == 1) return SequentialAction(
             InstantAction { locker.position = LockerPosition.NOT_LOCK.pos },
             SleepAction(0.5),
-            compositionLaunch(distance),
+            compositionLaunch(distance, true),
             InstantAction { locker.position = LockerPosition.LOCK.pos },
         )
 
         if (numArtifacts == 2) return SequentialAction(
             InstantAction { locker.position = LockerPosition.NOT_LOCK.pos },
             SleepAction(0.5),
-            compositionLaunch(distance),
+            compositionLaunch(distance, false),
             SleepAction(0.5),
-            compositionLaunch(distance),
+            compositionLaunch(distance, true),
             InstantAction { locker.position = LockerPosition.LOCK.pos },
         )
 
         if (numArtifacts == 3) return SequentialAction(
             InstantAction { locker.position = LockerPosition.NOT_LOCK.pos },
             SleepAction(0.5),
-            compositionLaunch(distance),
+            compositionLaunch(distance, false),
             SleepAction(0.5),
-            compositionLaunch(distance),
+            compositionLaunch(distance, false),
             SleepAction(0.5),
-            compositionLaunch(distance),
+            compositionLaunch(distance, true),
             InstantAction { locker.position = LockerPosition.LOCK.pos },
         )
 
@@ -500,8 +470,8 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             override fun run(p: TelemetryPacket): Boolean {
                 if (firstRun) {
                     intakeActive = false
-                    toggleIntake()
-                    transferOn()
+                    //toggleIntake()
+                    intakeOn()
                     timer.reset()
                     firstRun = false
                 }
@@ -511,10 +481,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
                 if ((artifacts.midArtifact == ArtifactColors.NONE && detectedArtifact != ArtifactColors.NONE)
                     || timer.seconds() > 1.5) {
                     artifacts.intake(detectedArtifact)
-                    transferOn()
-
-                    intakeActive = false // horrible hack ima lms
-                    toggleIntake()
+                    intakeOn()
                     return false
                 }
                 return true
@@ -580,12 +547,26 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
 
         return tag
     }
+
+    fun calculateTagDelta(): Double? {
+        // get tags
+        val depotTag = getDepotTag()
+
+        val delta = if (limelight == null) { // find delta
+            null // Not attached; do nothing
+        } else if (depotTag != null) {
+            -depotTag.position.x * 90 // negative! because positive is left by default
+        } else 0.0 // rotate to find the tag
+
+        telemetry.addData("Delta", delta)
+        return delta
+    }
     // endregion
 
     // region Enums
     enum class LaunchDistance(val velocity: Double) {
         FAR(1150.0),
-        CLOSE_FAR(1100.0),
+        CLOSE_FAR(1000.0),
         CLOSE_PEAK(900.0),
         CLOSE(750.0),
     }
