@@ -117,6 +117,8 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             toggleIntake()
         } else if (data.currentGamepadOne.squareWasPressed()) {
             toggleIntake()
+        } else if (data.currentGamepadTwo.circleWasPressed() || data.currentGamepadOne.circleWasPressed()) {
+            intakeReverse()
         }
 
         // Setting launch distance
@@ -235,6 +237,12 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
     fun intakeOn() {
         intakeMotor.power = 0.8
         transfer.power = 1.0
+        intakeActive = true
+    }
+
+    fun intakeReverse() {
+        intakeMotor.power = -0.8
+        transfer.power = -1.0
         intakeActive = true
     }
 
@@ -594,4 +602,5 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     companion object : HardwareMechanismSingletonManager<OuttakeV3>(::OuttakeV3) {
         @JvmField var CUSTOM: Double = 0.0
-    }}
+    }
+}

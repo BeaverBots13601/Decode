@@ -60,9 +60,9 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                     //Pose2d(-12.0, -12.0, (-25 * PI) / 32),
                     Pose2d(50.0, -12.0, (-28 * PI) / 32),
                     OuttakeV3.LaunchDistance.FAR,
+                    ArtifactPositions.BLUE_HUMAN_PLAYER,
                     ArtifactPositions.BLUE_FAR,
                     ArtifactPositions.BLUE_MID,
-                    ArtifactPositions.BLUE_CLOSE,
                     Pose2d(63.0, -36.0, -PI)
                 )
             }
@@ -72,9 +72,9 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                     //Pose2d(-12.0, 12.0, (3 * PI) / 4),
                     Pose2d(50.0, 12.0, (28 * PI) / 32),
                     OuttakeV3.LaunchDistance.FAR,
+                    ArtifactPositions.RED_HUMAN_PLAYER,
                     ArtifactPositions.RED_FAR,
                     ArtifactPositions.RED_MID,
-                    ArtifactPositions.RED_CLOSE,
                     Pose2d(63.0, 36.0, -PI)
                 )
             }
@@ -302,9 +302,11 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         RED_CLOSE(1.0, Pose2d(-18.0, 34.0, PI / 2)),
         RED_MID(1.0, Pose2d(3.0, 34.0, PI / 2)),
         RED_FAR(1.0, Pose2d(27.0, 34.0, PI / 2)),
+        RED_HUMAN_PLAYER(1.0, Pose2d(60.0, 64.0, PI / 2)),
         BLUE_CLOSE(-1.0, Pose2d(-18.0, -34.0, -PI / 2)),
         BLUE_MID(-1.0, Pose2d(3.0, -34.0, -PI / 2)),
         BLUE_FAR(-1.0, Pose2d(27.0, -34.0, -PI / 2)),
+        BLUE_HUMAN_PLAYER(1.0, Pose2d(60.0, -64.0, -PI / 2)),
     }
 
     protected enum class Path {
