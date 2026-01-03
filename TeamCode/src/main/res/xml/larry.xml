@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<Robot type="FirstInspires-FTC">
+    <LynxUsbDevice name="Control Hub Portal" serialNumber="(embedded)" parentModuleAddress="173">
+        <LynxModule name="Control Hub" port="173">
+            <!-- Drivetrain -->
+            <goBILDA5202SeriesMotor name="rightBack" port="0" />
+
+            <!-- Outtake (motors uncertain) -->
+            <Matrix12vMotor name="flywheel" port="1" />
+            <Matrix12vMotor name="counterspin" port="3" />
+            <Servo name="kicker" port="2" />
+
+            <!-- Intake -->
+            <Servo name="leftIntakePropBar" port="4" />
+
+            <!-- LED -->
+            <Servo name="leftIndicatorLED" port="5" />
+
+            <!-- Brakes -->
+            <Servo name="leftBrake" port="3" />
+
+            <!-- I2C -->
+            <goBILDAPinpoint name="pinpoint" port="0" bus="3" />
+
+            <!-- Built-in IMU -->
+            <ControlHubImuBHI260AP name="imu" port="0" bus="0" />
+        </LynxModule>
+        <LynxModule name="Expansion Hub 2" port="2">
+            <!-- Drivetrain -->
+            <goBILDA5202SeriesMotor name="leftFront" port="1" />
+            <goBILDA5202SeriesMotor name="rightFront" port="2" />
+            <goBILDA5202SeriesMotor name="leftBack" port="3" />
+
+            <!-- Intake -->
+            <goBILDA5202SeriesMotor name="intakeMotor" port="0" />
+            <Servo name="rightIntakePropBar" port="5" />
+
+            <!-- Outtake -->
+            <ContinuousRotationServo name="turntableAxon" port="3" />
+
+            <!-- I2C -->
+            <RevColorSensorV3 name="leftIntakeColorSensor" port="0" bus="0" />
+            <RevColorSensorV3 name="rightIntakeColorSensor" port="0" bus="1" />
+
+            <!-- Axon Encoders -->
+            <AnalogInput name="turntableEncoder" port="1" /> <!-- white -->
+            <AnalogInput name="spindexerEncoder" port="0" /> <!-- green -->
+
+            <!-- Riser -->
+            <Servo name="miniLift" port="0" />
+
+            <!-- Brakes -->
+            <Servo name="rightBrake" port="2" />
+
+            <!-- Spindexer -->
+            <ContinuousRotationServo name="spindexerAxon" port="1" />
+
+            <!-- LED -->
+            <Servo name="rightIndicatorLED" port="4" />
+        </LynxModule>
+    </LynxUsbDevice>
+    <EthernetDevice name="limelight" serialNumber="EthernetOverUsb:eth0:172.29.0.25" port="0" ipAddress="172.29.0.1" />
+</Robot>

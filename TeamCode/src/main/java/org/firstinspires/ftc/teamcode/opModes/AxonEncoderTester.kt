@@ -12,29 +12,31 @@ class AxonEncoderTester : LinearOpMode() {
         val telemetry = MultipleTelemetry(this.telemetry, FtcDashboard.getInstance().telemetry)
         val axon = AxonDriver(
             hardwareMap,
-            "turntableAxon",
-            "turntableEncoder",
+            "spindexerAxon",
+            "spindexerEncoder",
             0.0,
             0.0,
             0.0,
             telemetry,
-            -11.0 / 3.0,
+            2.0
         )
 
         waitForStart()
+        axon.targetPosition = 0.0
         while (!isStopRequested) {
-            if (gamepad1.left_bumper) {
-                axon.overridePower = 0.4
-            } else if (gamepad1.right_bumper) {
-                axon.overridePower = -0.4
-            } else if (gamepad1.x) {
+            if (gamepad1.leftBumperWasPressed()) {
+                //axon.overridePower = 0.2
+                axon.targetPosition = axon.targetPosition?.plus(60.0)
+            } else if (gamepad1.rightBumperWasPressed()) {
+                axon.targetPosition = axon.targetPosition?.minus(60.0)
+            } else if (gamepad1.cross) {
                 axon.reset()
             } else {
-                axon.overridePower = 0.0
+                //axon.overridePower = 0.0
             }
 
-            telemetry.addData("Normalized Position", axon.normalizedPosition)
-            telemetry.addData("Position", axon.position)
+            axon.targetPosition = axon.targetPosition
+
             telemetry.update()
         }
 

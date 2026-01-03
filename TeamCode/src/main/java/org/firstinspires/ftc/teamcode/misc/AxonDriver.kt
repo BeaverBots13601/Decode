@@ -142,7 +142,7 @@ class AxonDriver(
             return
         }
 
-        val position = internalNormalizedPosition
+        val position = this.position
         val error = targetPosition - position
 
         integralSum += (error * timer.seconds()) // sum of all error over time
@@ -157,10 +157,11 @@ class AxonDriver(
         axonServo.power = out
 
         lastError = error
+        this.error = error // error for outward facing
 
         // Divide by gearRatio so user expected values match up
         telemetry.addData("($axonServoName) PID Position", position / gearRatio)
-        telemetry.addData("($axonServoName) PID Normalized Position", position)
+        telemetry.addData("($axonServoName) PID Normalized Position", normalizedPosition)
         telemetry.addData("($axonServoName) PID Target", targetPosition / gearRatio)
         telemetry.addData("($axonServoName) PID Error", error / gearRatio)
         telemetry.addData("($axonServoName) PID Power", out)
@@ -180,6 +181,9 @@ class AxonDriver(
             field = it?.times(gearRatio)
             loop()
         }
+
+    var error: Double = 0.0
+        private set
 
     /**
      * The power the axon will be set to. This will disable the standard control loop.
