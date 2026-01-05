@@ -14,28 +14,28 @@ class AxonEncoderTester : LinearOpMode() {
             hardwareMap,
             "spindexerAxon",
             "spindexerEncoder",
-            0.0,
-            0.0,
-            0.0,
+            0.002,
+            0.012,
+            0.00022,
             telemetry,
-            2.0
         )
 
         waitForStart()
+        axon.start()
         axon.targetPosition = 0.0
         while (!isStopRequested) {
             if (gamepad1.leftBumperWasPressed()) {
                 //axon.overridePower = 0.2
-                axon.targetPosition = axon.targetPosition?.plus(60.0)
+                axon.targetPosition = axon.targetPosition?.plus(120.0)
             } else if (gamepad1.rightBumperWasPressed()) {
-                axon.targetPosition = axon.targetPosition?.minus(60.0)
+                axon.targetPosition = axon.targetPosition?.minus(120.0)
             } else if (gamepad1.cross) {
                 axon.reset()
             } else {
                 //axon.overridePower = 0.0
             }
 
-            axon.targetPosition = axon.targetPosition
+            axon.update()
 
             telemetry.update()
         }

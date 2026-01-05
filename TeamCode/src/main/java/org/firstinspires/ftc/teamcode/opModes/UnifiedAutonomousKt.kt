@@ -14,7 +14,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
-import org.firstinspires.ftc.teamcode.hardware.OuttakeV3
+import org.firstinspires.ftc.teamcode.hardware.OuttakeV4
 import org.firstinspires.ftc.teamcode.roadrunner.MecanumDrive
 import org.firstinspires.ftc.teamcode.sensor.LimelightKt
 import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
@@ -37,7 +37,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
     ), telemetry) }
 
     override fun runOpMode() {
-        val out = OuttakeV3.getInstance(hardwareMap, HardwareMechanismKt.InitData(
+        val out = OuttakeV4.getInstance(hardwareMap, HardwareMechanismKt.InitData(
             currentLocation.teamColor,
             HardwareMechanismKt.DriveMode.ROBOT,
             FtcDashboard.getInstance().isEnabled,
@@ -59,7 +59,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 RouteParameters(
                     //Pose2d(-12.0, -12.0, (-25 * PI) / 32),
                     Pose2d(50.0, -12.0, (-28 * PI) / 32),
-                    OuttakeV3.LaunchDistance.FAR,
+                    OuttakeV4.LaunchDistance.FAR,
                     ArtifactPositions.BLUE_HUMAN_PLAYER,
                     ArtifactPositions.BLUE_FAR,
                     ArtifactPositions.BLUE_MID,
@@ -71,7 +71,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 RouteParameters(
                     //Pose2d(-12.0, 12.0, (3 * PI) / 4),
                     Pose2d(50.0, 12.0, (28 * PI) / 32),
-                    OuttakeV3.LaunchDistance.FAR,
+                    OuttakeV4.LaunchDistance.FAR,
                     ArtifactPositions.RED_HUMAN_PLAYER,
                     ArtifactPositions.RED_FAR,
                     ArtifactPositions.RED_MID,
@@ -83,7 +83,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 RouteParameters(
                     Pose2d(-24.0, -24.0, -3 * PI / 4),
 //                    Pose2d(-24.0, -24.0, -21 * PI / 32),
-                    OuttakeV3.LaunchDistance.CLOSE_PEAK,
+                    OuttakeV4.LaunchDistance.CLOSE,
                     ArtifactPositions.BLUE_CLOSE,
                     ArtifactPositions.BLUE_MID,
                     ArtifactPositions.BLUE_FAR,
@@ -95,7 +95,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 RouteParameters(
                     Pose2d(-24.0, 24.0, 3 * PI / 4),
 //                    Pose2d(-24.0, 24.0, 21 * PI / 32),
-                    OuttakeV3.LaunchDistance.CLOSE_PEAK,
+                    OuttakeV4.LaunchDistance.CLOSE,
                     ArtifactPositions.RED_CLOSE,
                     ArtifactPositions.RED_MID,
                     ArtifactPositions.RED_FAR,
@@ -285,7 +285,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
     private data class RouteParameters(
         val launchPose: Pose2d,
-        val launchDistance: OuttakeV3.LaunchDistance,
+        val launchDistance: OuttakeV4.LaunchDistance,
         val firstArtifactRow: ArtifactPositions,
         val secondArtifactRow: ArtifactPositions,
         val thirdArtifactRow: ArtifactPositions,

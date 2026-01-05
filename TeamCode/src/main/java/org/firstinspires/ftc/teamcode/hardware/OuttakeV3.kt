@@ -26,6 +26,7 @@ import org.firstinspires.ftc.teamcode.misc.GoBildaRGBIndicatorDriver
 import org.firstinspires.ftc.teamcode.misc.GoBildaRGBIndicatorDriver.Color
 import org.firstinspires.ftc.teamcode.misc.PIDVelocityController
 import org.firstinspires.ftc.teamcode.misc.PoseKt
+import org.firstinspires.ftc.teamcode.misc.ArtifactColors
 import org.firstinspires.ftc.teamcode.sensor.LimelightKt
 import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
 import kotlin.math.abs
@@ -84,7 +85,7 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         locker.position = LockerPosition.LOCK.pos
     }
 
-    override fun start() {}
+    override fun start() = turntableAxon.start()
 
 
     // Config info
@@ -198,6 +199,8 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
             // rotate
             rotateTurretByDelta(delta)
         }
+
+        turntableAxon.update()
     }
     private var turntableLocked = false
 
@@ -577,12 +580,6 @@ class OuttakeV3 private constructor(hardwareMap: HardwareMap, initData: InitData
         CLOSE_FAR(1000.0),
         CLOSE_PEAK(900.0),
         CLOSE(750.0),
-    }
-
-    enum class ArtifactColors {
-        PURPLE,
-        GREEN,
-        NONE,
     }
 
     enum class LeftKickerPosition(val pos: Double) {

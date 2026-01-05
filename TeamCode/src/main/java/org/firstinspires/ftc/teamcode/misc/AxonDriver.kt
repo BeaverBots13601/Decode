@@ -29,6 +29,21 @@ class AxonDriver(
     private val axonServo = hardwareMap.crservo.get(axonServoName).apply { power = 0.0 }
     private val channel = hardwareMap.analogInput.get(axonEncoderName)
 
+    fun start() {
+        encoderTimer.reset()
+    }
+
+    fun update() {
+        updateEncoder()
+        updatePID()
+    }
+
+    private var thread = Thread {
+        while (!Thread.currentThread().isInterrupted) {
+            update()
+        }
+    }//.apply { start() }
+
     // region Encoder tracking
     var initDelta: Double = run {
         Thread.sleep(1000) // Have to do this to let the axon initialize and send a signal
@@ -44,41 +59,37 @@ class AxonDriver(
     var position: Double = 0.0 // initializer not quite working
         private set
 
-    private var thread = Thread {
-        var normalizedPosLastCycle = internalNormalizedPosition
-        val timer = ElapsedTime()
-        while (!Thread.currentThread().isInterrupted) {
-            if (timer.milliseconds() > 250 && !warningMessageSet){
-                /*
-                * @ 4.8v it takes 140ms to move 60deg. Because we can effectively track 180deg
-                * of rotation in a single loop, 250ms is a fair warning level.
-                * We want to warn because we could have lost rotation, offsetting automatic controls.
-                */
-                RobotLog.addGlobalWarningMessage("Warning: Servo encoder tracking loop has gone on for more than 250ms. Servo positional data risks being incorrect and affecting automatic controls. Please report this to a programmer.")
-                warningMessageSet = true
-            }
-            timer.reset()
-
-            val currentNormalizedPosition = internalNormalizedPosition
-            // Determine the delta between the current position and the previous position
-            val normalizedDelta = currentNormalizedPosition - normalizedPosLastCycle
-
-            var trueDelta = normalizedDelta
-            if (normalizedDelta > 180){ // underflow has occurred (i.e. 10 -> 350)
-                // 10 -> 350, 340 delta, -20 true delta
-                trueDelta -= 360
-            } else if (normalizedDelta < -180) {
-                // 350 -> 10, -340 delta, 20 true delta
-                trueDelta += 360
-            }
-
-            // Save the difference to a variable counting our overall rotation
-            position += trueDelta / gearRatio
-            normalizedPosLastCycle = currentNormalizedPosition
-
-            runCatching { Thread.sleep(50) }
+    var normalizedPosLastCycle = internalNormalizedPosition
+    val encoderTimer = ElapsedTime()
+    private fun updateEncoder() {
+        if (encoderTimer.milliseconds() > 250 && !warningMessageSet){
+            /*
+            * @ 4.8v it takes 140ms to move 60deg. Because we can effectively track 180deg
+            * of rotation in a single loop, 250ms is a fair warning level.
+            * We want to warn because we could have lost rotation, offsetting automatic controls.
+            */
+            RobotLog.addGlobalWarningMessage("Warning: Servo encoder tracking loop has gone on for more than 250ms. Servo positional data risks being incorrect and affecting automatic controls. Please report this to a programmer.")
+            warningMessageSet = true
         }
-    }.apply { start() }
+        encoderTimer.reset()
+
+        val currentNormalizedPosition = internalNormalizedPosition
+        // Determine the delta between the current position and the previous position
+        val normalizedDelta = currentNormalizedPosition - normalizedPosLastCycle
+
+        var trueDelta = normalizedDelta
+        if (normalizedDelta > 180){ // underflow has occurred (i.e. 10 -> 350)
+            // 10 -> 350, 340 delta, -20 true delta
+            trueDelta -= 360
+        } else if (normalizedDelta < -180) {
+            // 350 -> 10, -340 delta, 20 true delta
+            trueDelta += 360
+        }
+
+        // Save the difference to a variable counting our overall rotation
+        position += trueDelta / gearRatio
+        normalizedPosLastCycle = currentNormalizedPosition
+    }
 
     /**
      * The rotational difference between the starting and current positions, normalized between [-180, 180)
@@ -120,7 +131,7 @@ class AxonDriver(
     private var pastTargetPosition: Double? = null
     private val timer = ElapsedTime()
 
-    private fun loop() {
+    private fun updatePID() {
         val overridePower = overridePower // get a local copy to avoid concurrency issues
         if (overridePower != null) {
             axonServo.power = overridePower
@@ -173,13 +184,10 @@ class AxonDriver(
      * The target position of the axon.
      *
      * Set to null to disable control and set the velocity to 0.
-     *
-     * The control loop is ran when you set the power, so you should set it every loop.
      */
     var targetPosition: Double? = null
         set(it) {
             field = it?.times(gearRatio)
-            loop()
         }
 
     var error: Double = 0.0
@@ -191,10 +199,6 @@ class AxonDriver(
      * Set to null to disable override control.
      */
     var overridePower: Double? = null
-        set(it) {
-            field = it
-            loop()
-        }
     // endregion
 
     fun cleanUp() = thread.interrupt()

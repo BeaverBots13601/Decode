@@ -25,6 +25,7 @@ import org.firstinspires.ftc.teamcode.misc.DualMotorPIDVelocityController
 import org.firstinspires.ftc.teamcode.misc.GoBildaRGBIndicatorDriver
 import org.firstinspires.ftc.teamcode.misc.GoBildaRGBIndicatorDriver.Color
 import org.firstinspires.ftc.teamcode.misc.PoseKt
+import org.firstinspires.ftc.teamcode.misc.ArtifactColors
 import org.firstinspires.ftc.teamcode.sensor.LimelightKt
 import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
 import kotlin.math.abs
@@ -36,7 +37,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     private val rightIndicatorLED = GoBildaRGBIndicatorDriver(hardwareMap.servo.get("rightIndicatorLED"))
 
     // Flywheels
-    private val flywheel = DualMotorPIDVelocityController(
+    val flywheel = DualMotorPIDVelocityController(
         createDefaultMotor(hardwareMap, "flywheel").apply {
             direction = DcMotorSimple.Direction.REVERSE
         },
@@ -46,12 +47,12 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         0.00001,
         telemetry,
     )
-    // flywheel needs to be reversed
 
     // Kicker
     private val kicker = hardwareMap.servo.get("kicker").apply {
         position = KickerPosition.NOT_KICK.pos
     }
+    private val booster = createDefaultMotor(hardwareMap, "boosterMotor")
 
     // Intake
     private val intakeMotor = createDefaultMotor(hardwareMap, "intakeMotor").apply {
@@ -69,7 +70,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     private val rightIntakeColorSensor = hardwareMap.get(RevColorSensorV3::class.java, "rightIntakeColorSensor")
 
     // Turntable
-    val turntable = AxonDriver(
+    private val turntable = AxonDriver(
         hardwareMap,
         "turntableAxon",
         "turntableEncoder",
@@ -82,14 +83,13 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     )
 
     // Spindexer
-    val spindexer = AxonDriver(
+    private val spindexer = AxonDriver(
         hardwareMap,
         "spindexerAxon",
         "spindexerEncoder",
-        0.002,
-        0.012,
-        0.00022,
-        // 0.01 = ku, 1/3 = tu
+        0.006,
+        0.0005,
+        0.00005,
         telemetry,
     ).apply {
         targetPosition = 0.0
@@ -100,7 +100,10 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     // endregion
 
-    override fun start() {}
+    override fun start() {
+        spindexer.start()
+        turntable.start()
+    }
 
     // Config info
     private val teamColor = initData.teamColor
@@ -115,18 +118,26 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     private var leftRed = true
     private val timer = ElapsedTime()
     private var delta = 0.0
+    private var emergencyModeActive = false
 
     override fun run(data: RunData) {
-        // !!! EMERGENCY !!!
-        if (data.currentGamepadTwo.ps) {
+        // region !!! EMERGENCY !!!
+        if (data.currentGamepadTwo.psWasPressed()) { emergencyModeActive = !emergencyModeActive }
+
+        if (emergencyModeActive) {
             if (data.currentGamepadTwo.dpad_down) {
                 flywheel.setVelocity(-1000000.0)
+                booster.power = 1.0
             } else if (data.currentGamepadTwo.dpad_up) {
                 flywheel.setVelocity(1000000.0)
+                booster.power = 1.0
             } else if (data.currentGamepadTwo.leftBumperWasPressed()) {
                 runBlocking(launch(true))
             } else if (data.currentGamepadTwo.rightBumperWasPressed()) {
 
+            } else {
+                flywheel.setVelocity(null)
+                booster.power = 0.0
             }
 
             spindexer.overridePower = if (data.currentGamepadTwo.dpad_right) {
@@ -147,6 +158,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         } else {
             spindexer.overridePower = null
         }
+        // endregion
 
         // Detect intake artifact
         val leftColors  = leftIntakeColorSensor.normalizedColors
@@ -172,7 +184,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
 
         // update pid
-        spindexer.targetPosition = spindexer.targetPosition
+        spindexer.update()
 
         artifacts.updateTelemetry(telemetry)
 
@@ -181,11 +193,9 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         // endregion
 
         // Intaking controls
-        if (data.currentGamepadTwo.squareWasPressed()) {
+        if (data.currentGamepadTwo.squareWasPressed() || data.currentGamepadOne.squareWasPressed()) {
             toggleIntake()
-        } else if (data.currentGamepadOne.squareWasPressed()) {
-            toggleIntake()
-        } else if (data.currentGamepadTwo.circleWasPressed() || data.currentGamepadOne.circleWasPressed()) {
+        } else if (data.currentGamepadTwo.left_trigger > 0.5 || data.currentGamepadOne.left_trigger > 0.5) {
             intakeReverse()
         }
 
@@ -209,7 +219,10 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
         setLEDs()
 
-        if (data.currentGamepadTwo.triangleWasPressed()) { awaitingLaunch = ArtifactColors.GREEN }
+        // triangle launch all
+        if (data.currentGamepadTwo.triangleWasPressed()) { runBlocking(launchAllHeld(currentLaunchDistance)) }
+
+        if (data.currentGamepadTwo.circleWasPressed()) { awaitingLaunch = ArtifactColors.GREEN }
 
         if (data.currentGamepadTwo.crossWasPressed()) { awaitingLaunch = ArtifactColors.PURPLE }
 
@@ -236,14 +249,18 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
 
         // region Flywheels (on trigger)
+        var boosterPower: Double
         flywheel.setVelocity(if (data.currentGamepadTwo.right_trigger < 0.5) {
             telemetry.addData("Target Velocity (tps)", 0.0)
+            boosterPower = 0.0
             null // disable control
         } else {
             val vel = if (CUSTOM != 0.0) CUSTOM else currentLaunchDistance.velocity
             telemetry.addData("Target Velocity (tps)", vel)
+            boosterPower = 1.0
             vel
         })
+        booster.power = boosterPower
 
         telemetry.addData("Current Launch Mode", currentLaunchDistance)
         telemetry.addData("Current Velocity (tps)", flywheel.velocity)
@@ -276,6 +293,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
             // rotate
             rotateTurretByDelta(delta)
         }
+
+        turntable.update()
         // endregion
     }
 
@@ -332,14 +351,14 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
      */
     fun rotateSpindexer(position: Position) {
         if (position == Position.OUTTAKE) {
-            spindexer.targetPosition = spindexer.targetPosition?.minus(SPINDEXER_ROTATE_DEGREES * 2)
+            spindexer.targetPosition = spindexer.targetPosition?.plus(SPINDEXER_ROTATE_DEGREES * 2)
         } else if (position == Position.STORAGE) {
-            spindexer.targetPosition = spindexer.targetPosition?.minus(SPINDEXER_ROTATE_DEGREES)
+            spindexer.targetPosition = spindexer.targetPosition?.plus(SPINDEXER_ROTATE_DEGREES)
         }
     }
 
     fun rotateSpindexerForLaunch() {
-        spindexer.targetPosition = spindexer.targetPosition?.plus(SPINDEXER_ROTATE_DEGREES)
+        spindexer.targetPosition = spindexer.targetPosition?.minus(SPINDEXER_ROTATE_DEGREES)
     }
 
     private fun setLEDs() {
@@ -484,6 +503,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 p.put("Spun Up?", spunUp)
 
                 flywheel.setVelocity(distance.velocity)
+                booster.power = 1.0
 
                 val averageVelocity = flywheel.velocity
                 if (!spunUp && abs(abs(averageVelocity) - distance.velocity) < 100) {
@@ -498,6 +518,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 if ((lastVelocity - averageVelocity) > 50.0 || timer.seconds() > timeout) {
                     p.put("Current Speed", averageVelocity)
                     flywheel.setVelocity(null)
+                    booster.power = 0.0
                     return false // big drop, all done, or timed out
                 }
 
@@ -532,6 +553,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 if ((lastVelocity - averageVelocity) > 50.0 || timer.seconds() > timeout) {
                     p.put("Current Speed", averageVelocity)
                     flywheel.setVelocity(null)
+                    booster.power = 0.0
                     return false // big drop & all done, or timed out
                 }
 
@@ -551,6 +573,9 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
     }
 
+    /**
+     * Assumes the artifact you are launching is ready.
+     */
     fun compositionLaunch(distance: LaunchDistance, kick: Boolean? = null): Action {
         return ParallelAction(
             spinUpUntilLaunched(distance),
@@ -563,6 +588,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     fun launchAllHeld(distance: LaunchDistance): Action {
         val numArtifacts = artifacts.artifactsHeld
+
+        // FIXME: NEEDS TO MOVE ARTIFACTS TO RIGHT SPOT
 
         if (numArtifacts == 0) return InstantAction {}
 
@@ -621,18 +648,6 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     enum class LaunchDistance(val velocity: Double) {
         FAR(1150.0),
         CLOSE(750.0),
-    }
-
-    enum class ArtifactColors {
-        PURPLE,
-        GREEN,
-        NONE,
-    }
-
-    enum class Motif(val first: ArtifactColors, val second: ArtifactColors, val third: ArtifactColors) {
-        PURPLE_PURPLE_GREEN(ArtifactColors.PURPLE, ArtifactColors.PURPLE, ArtifactColors.GREEN),
-        PURPLE_GREEN_PURPLE(ArtifactColors.PURPLE, ArtifactColors.GREEN, ArtifactColors.PURPLE),
-        GREEN_PURPLE_PURPLE(ArtifactColors.GREEN, ArtifactColors.PURPLE, ArtifactColors.PURPLE),
     }
 
     enum class Position {
