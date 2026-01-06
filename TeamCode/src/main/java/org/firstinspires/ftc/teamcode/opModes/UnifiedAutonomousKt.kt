@@ -12,9 +12,11 @@ import com.qualcomm.hardware.limelightvision.Limelight3A
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.Disabled
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
+import com.qualcomm.robotcore.util.ElapsedTime
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
 import org.firstinspires.ftc.teamcode.hardware.OuttakeV4
+import org.firstinspires.ftc.teamcode.misc.Motif
 import org.firstinspires.ftc.teamcode.roadrunner.MecanumDrive
 import org.firstinspires.ftc.teamcode.sensor.LimelightKt
 import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
@@ -182,7 +184,9 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 //            SleepAction(0.5),
             ParallelAction(
                 thirdArtifact.build(),
-                out.intakeUntilDetectedOrTimeout()
+                out.intakeUntilIndexedOrTimeout(),
+                out.intakeUntilIndexedOrTimeout(),
+                out.intakeUntilIndexedOrTimeout(),
             ),
             toLaunchTwo.build(),
         )
@@ -202,7 +206,9 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 //            SleepAction(0.5),
             ParallelAction(
                 sixArtifact.build(),
-                out.intakeUntilDetectedOrTimeout()
+                out.intakeUntilIndexedOrTimeout(),
+                out.intakeUntilIndexedOrTimeout(),
+                out.intakeUntilIndexedOrTimeout(),
             ),
             toLaunchThree.build(),
         )
@@ -222,7 +228,9 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 //            SleepAction(0.50),
             ParallelAction(
                 nineArtifact.build(),
-                out.intakeUntilDetectedOrTimeout()
+                out.intakeUntilIndexedOrTimeout(),
+                out.intakeUntilIndexedOrTimeout(),
+                out.intakeUntilIndexedOrTimeout(),
             ),
             toLaunchFour.build(),
         )
@@ -248,6 +256,21 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         out.start()
         limelight?.start()
 
+        var motif: Motif? = null
+        val timer = ElapsedTime()
+
+        while (motif == null && timer.seconds() < 2.0) { // find tag or abort if too long
+            motif = when (limelight?.getAprilTags()?.firstOrNull { it.id == 23 || it.id == 22 || it.id == 21 }?.id) {
+                23 -> Motif.PURPLE_PURPLE_GREEN
+                22 -> Motif.PURPLE_GREEN_PURPLE
+                21 -> Motif.GREEN_PURPLE_PURPLE
+                else -> null // default
+            }
+        }
+        telemetry.addData("Detected Motif", motif)
+        telemetry.update()
+        motif = motif ?: Motif.GREEN_PURPLE_PURPLE // default
+
         thread.start()
 
         if (currentLocation == Locations.RedFar || currentLocation == Locations.BlueFar) {
@@ -257,13 +280,13 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         }
         runBlocking(toLaunchAction)
         out.intakeOn()
-        runBlocking(out.launchAllHeld(launchDistance))
+        runBlocking(out.launchAllHeld(launchDistance, motif))
         runBlocking(firstGroup)
-        runBlocking(out.launchAllHeld(launchDistance))
+        runBlocking(out.launchAllHeld(launchDistance, motif))
         runBlocking(secondGroup)
-        runBlocking(out.launchAllHeld(launchDistance))
+        runBlocking(out.launchAllHeld(launchDistance, motif))
         runBlocking(thirdGroup)
-        runBlocking(out.launchAllHeld(launchDistance))
+        runBlocking(out.launchAllHeld(launchDistance, motif))
         runBlocking(toPark)
 
         out.stop()

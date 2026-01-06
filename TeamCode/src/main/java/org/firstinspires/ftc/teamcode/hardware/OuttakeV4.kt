@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.hardware
 
+import com.acmerobotics.dashboard.FtcDashboard
+import com.acmerobotics.dashboard.config.Config
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket
 import com.acmerobotics.roadrunner.Action
 import com.acmerobotics.roadrunner.InstantAction
@@ -26,10 +28,12 @@ import org.firstinspires.ftc.teamcode.misc.GoBildaRGBIndicatorDriver
 import org.firstinspires.ftc.teamcode.misc.GoBildaRGBIndicatorDriver.Color
 import org.firstinspires.ftc.teamcode.misc.PoseKt
 import org.firstinspires.ftc.teamcode.misc.ArtifactColors
+import org.firstinspires.ftc.teamcode.misc.Motif
 import org.firstinspires.ftc.teamcode.sensor.LimelightKt
 import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
 import kotlin.math.abs
 
+@Config
 class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData, private val telemetry: Telemetry) : HardwareMechanismKt() {
     // region Hardware
     // LEDs
@@ -113,14 +117,21 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     private var currentLaunchDistance = LaunchDistance.CLOSE
     private var turntableLocked = false
     private var awaitingLaunch = ArtifactColors.NONE
+    private var launchAction: Action? = null
+    private var numPurple: Int? = null
 
-    // Emergency Mode Stuff
+    // region Emergency Mode Stuff
     private var leftRed = true
     private val timer = ElapsedTime()
     private var delta = 0.0
     private var emergencyModeActive = false
+    // endregion
 
     override fun run(data: RunData) {
+        // update pid before the hijack so tracking is maintained
+        spindexer.update()
+        turntable.update()
+
         // region !!! EMERGENCY !!!
         if (data.currentGamepadTwo.psWasPressed()) { emergencyModeActive = !emergencyModeActive }
 
@@ -131,18 +142,16 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
             } else if (data.currentGamepadTwo.dpad_up) {
                 flywheel.setVelocity(1000000.0)
                 booster.power = 1.0
-            } else if (data.currentGamepadTwo.leftBumperWasPressed()) {
+            } else if (data.currentGamepadTwo.dpadLeftWasPressed() || data.currentGamepadTwo.dpadRightWasPressed()) {
                 runBlocking(launch(true))
-            } else if (data.currentGamepadTwo.rightBumperWasPressed()) {
-
             } else {
                 flywheel.setVelocity(null)
                 booster.power = 0.0
             }
 
-            spindexer.overridePower = if (data.currentGamepadTwo.dpad_right) {
+            spindexer.overridePower = if (data.currentGamepadTwo.right_bumper) {
                 0.2
-            } else if (data.currentGamepadTwo.dpad_left) {
+            } else if (data.currentGamepadTwo.left_bumper) {
                 -0.2
             } else 0.0
 
@@ -160,36 +169,36 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
         // endregion
 
-        // Detect intake artifact
-        val leftColors  = leftIntakeColorSensor.normalizedColors
-        val rightColors = rightIntakeColorSensor.normalizedColors
-        val detectedArtifact = detectArtifact(leftColors, rightColors)
-        telemetry.addData("Detected Artifact", detectedArtifact)
+        // region Launching multiple artifacts
+        if (numPurple != null) { // We're setting the order of artifacts for our launch action
+            turntable.overridePower = null
+            awaitingLaunch = ArtifactColors.NONE
+            if (data.currentGamepadTwo.circleWasPressed()) {
+                // End evaluation; we can guess the motif from here
+                launchAction = when (numPurple) {
+                    0 -> {
+                        launchAllHeld(currentLaunchDistance, Motif.GREEN_PURPLE_PURPLE)
+                    }
+                    1 -> {
+                        launchAllHeld(currentLaunchDistance, Motif.PURPLE_GREEN_PURPLE)
+                    }
+                    else -> /* 2 or more */ {
+                        launchAllHeld(currentLaunchDistance, Motif.PURPLE_PURPLE_GREEN)
+                    }
+                }
 
-        // region Spindexer Controls
-        var spindexerMoving = abs(spindexer.error) > 10
-
-        if (detectedArtifact != ArtifactColors.NONE && !spindexerMoving) {
-            artifacts.intake(detectedArtifact)
-            val rotateTo = artifacts.rotate()
-            rotateSpindexer(rotateTo)
-
-            if (artifacts.intakeArtifact != ArtifactColors.NONE
-                && artifacts.outtakeArtifact != ArtifactColors.NONE
-                && artifacts.storageArtifact != ArtifactColors.NONE) {
-                //intakeOff()
+                numPurple = null
             }
-        } else {
 
+            if (data.currentGamepadTwo.crossWasPressed()) { numPurple = numPurple?.plus(1) }
+
+            return
+        } else if (launchAction != null) {
+            val packet = TelemetryPacket()
+            if (launchAction?.run(packet) == false) launchAction = null
+            FtcDashboard.getInstance().sendTelemetryPacket(packet)
+            return
         }
-
-        // update pid
-        spindexer.update()
-
-        artifacts.updateTelemetry(telemetry)
-
-        spindexerMoving = abs(spindexer.error) > 10
-        telemetry.addData("Spindexer Moving", spindexerMoving)
         // endregion
 
         // Intaking controls
@@ -198,6 +207,33 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         } else if (data.currentGamepadTwo.left_trigger > 0.5 || data.currentGamepadOne.left_trigger > 0.5) {
             intakeReverse()
         }
+
+        if (artifacts.artifactsHeld == 3) {
+            //intakeOff()
+            offsetSpindexer(Offset.STORAGE)
+            // lift bars
+        }
+
+        // region Spindexer Command
+        // Detect intake artifact
+        val leftColors  = leftIntakeColorSensor.normalizedColors
+        val rightColors = rightIntakeColorSensor.normalizedColors
+        val detectedArtifact = detectArtifact(leftColors, rightColors)
+        telemetry.addData("Detected Artifact", detectedArtifact)
+
+        var spindexerMoving = abs(spindexer.error) > TOLERANCE_DEGREES
+
+        if (detectedArtifact != ArtifactColors.NONE && !spindexerMoving) {
+            artifacts.intake(detectedArtifact)
+            val rotateTo = artifacts.rotate()
+            rotateSpindexer(rotateTo)
+        }
+
+        artifacts.updateTelemetry(telemetry)
+
+        spindexerMoving = abs(spindexer.error) > TOLERANCE_DEGREES
+        telemetry.addData("Spindexer Moving", spindexerMoving)
+        // endregion
 
         // region Setting launch distance
         if (data.currentGamepadTwo.dpadUpWasPressed()) {
@@ -220,15 +256,17 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         setLEDs()
 
         // triangle launch all
-        if (data.currentGamepadTwo.triangleWasPressed()) { runBlocking(launchAllHeld(currentLaunchDistance)) }
+        if (data.currentGamepadTwo.triangleWasPressed()) { numPurple = 0; return }
 
+        // single launch
         if (data.currentGamepadTwo.circleWasPressed()) { awaitingLaunch = ArtifactColors.GREEN }
 
         if (data.currentGamepadTwo.crossWasPressed()) { awaitingLaunch = ArtifactColors.PURPLE }
 
         telemetry.addData("Awaiting Launch", awaitingLaunch)
 
-        // Fire! when a launch is queued and we aren't rotating
+        // region Fire!
+        // when a single launch is queued and we aren't rotating
         if (!spindexerMoving && awaitingLaunch != ArtifactColors.NONE) {
             val launchArtifact = artifacts.color(awaitingLaunch)
             if (launchArtifact == Position.OUTTAKE) { // in right spot, launch!
@@ -247,20 +285,19 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 awaitingLaunch = ArtifactColors.NONE
             }
         }
+        // endregion
 
         // region Flywheels (on trigger)
-        var boosterPower: Double
-        flywheel.setVelocity(if (data.currentGamepadTwo.right_trigger < 0.5) {
+        if (data.currentGamepadTwo.right_trigger < 0.5) {
+            booster.power = 0.0
             telemetry.addData("Target Velocity (tps)", 0.0)
-            boosterPower = 0.0
-            null // disable control
+            flywheel.setVelocity(null) // disable control
         } else {
+            booster.power = 1.0
             val vel = if (CUSTOM != 0.0) CUSTOM else currentLaunchDistance.velocity
             telemetry.addData("Target Velocity (tps)", vel)
-            boosterPower = 1.0
-            vel
-        })
-        booster.power = boosterPower
+            flywheel.setVelocity(vel)
+        }
 
         telemetry.addData("Current Launch Mode", currentLaunchDistance)
         telemetry.addData("Current Velocity (tps)", flywheel.velocity)
@@ -278,9 +315,6 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
             turntable.reset()
         }
 
-        if (data.currentGamepadTwo.psWasPressed()) {
-            turntableLocked = !turntableLocked
-        }
         telemetry.addData("Turntable Auto-gimballing Disabled", turntableLocked)
 
         if (turntableLocked || power != 0.0) {
@@ -293,8 +327,6 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
             // rotate
             rotateTurretByDelta(delta)
         }
-
-        turntable.update()
         // endregion
     }
 
@@ -345,20 +377,82 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         return abs(spindexer.position - target) < 10
     }
 
+    fun liftIntakeBars() {
+        leftIntakePropBar.position  = LeftPropBarPosition.PROP.pos
+        rightIntakePropBar.position = RightPropBarPosition.PROP.pos
+    }
+
+    fun lowerIntakeBars() {
+        leftIntakePropBar.position  = LeftPropBarPosition.DOWN.pos
+        rightIntakePropBar.position = RightPropBarPosition.DOWN.pos
+    }
+
+    private var offset = Offset.NONE
+
     /**
      * Physically rotate the current artifacts.
      * @param position Position that the current intake artifact will end up in.
      */
-    fun rotateSpindexer(position: Position) {
+    fun rotateSpindexer(position: Position) { // ending w/ no offset
+        val offsetDeg = offset.offsetDeg // how much we are currently offset in negative direction
+        offset = Offset.NONE
         if (position == Position.OUTTAKE) {
-            spindexer.targetPosition = spindexer.targetPosition?.plus(SPINDEXER_ROTATE_DEGREES * 2)
+            spindexer.targetPosition = spindexer.targetPosition?.plus((SPINDEXER_ROTATE_DEGREES * 2) + offsetDeg)
         } else if (position == Position.STORAGE) {
-            spindexer.targetPosition = spindexer.targetPosition?.plus(SPINDEXER_ROTATE_DEGREES)
+            spindexer.targetPosition = spindexer.targetPosition?.plus(SPINDEXER_ROTATE_DEGREES + offsetDeg)
         }
     }
 
-    fun rotateSpindexerForLaunch() {
-        spindexer.targetPosition = spindexer.targetPosition?.minus(SPINDEXER_ROTATE_DEGREES)
+    fun rotateSpindexerForLaunch() { // ending with LAUNCH offset
+        spindexer.targetPosition = when (offset) {
+            Offset.LAUNCH -> {
+                // already offset just go more
+                spindexer.targetPosition?.minus(SPINDEXER_ROTATE_DEGREES)
+            }
+            Offset.NONE -> {
+                val offsetDeg = Offset.LAUNCH.offsetDeg // how much to be offset in negative
+                spindexer.targetPosition?.minus(SPINDEXER_ROTATE_DEGREES + offsetDeg)
+            }
+            Offset.STORAGE -> {
+                // do math to account for the difference
+                val offsetDeg = Offset.LAUNCH.offsetDeg - Offset.STORAGE.offsetDeg
+                spindexer.targetPosition?.minus(SPINDEXER_ROTATE_DEGREES + offsetDeg)
+            }
+        }
+        offset = Offset.LAUNCH
+    }
+
+    fun offsetSpindexer(newOffset: Offset) {
+        if (newOffset == offset) return
+        if (newOffset == Offset.NONE) {
+            // We're always just undoing our current offset
+            spindexer.targetPosition = spindexer.targetPosition?.plus(offset.offsetDeg)
+            offset = newOffset
+            return
+        }
+        spindexer.targetPosition = when (offset) {
+            Offset.STORAGE -> { // storage -> launch
+                val offsetDeg: Double = TODO()
+                spindexer.targetPosition?.plus(offsetDeg)
+            }
+            Offset.LAUNCH -> { // launch -> storage
+                val offsetDeg: Double = TODO()
+                spindexer.targetPosition?.plus(offsetDeg)
+            }
+            Offset.NONE -> { // none -> launch or storage
+                when (newOffset) {
+                    Offset.LAUNCH -> {
+                        spindexer.targetPosition?.minus(Offset.LAUNCH.offsetDeg)
+                    }
+                    Offset.STORAGE -> {
+                        spindexer.targetPosition?.minus(Offset.STORAGE.offsetDeg)
+                    }
+                    Offset.NONE -> return // impossible case
+                }
+
+            }
+        }
+        offset = newOffset
     }
 
     private fun setLEDs() {
@@ -586,30 +680,34 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         )
     }
 
-    fun launchAllHeld(distance: LaunchDistance): Action {
+    fun launchAllHeld(distance: LaunchDistance, motif: Motif): Action {
         val numArtifacts = artifacts.artifactsHeld
-
-        // FIXME: NEEDS TO MOVE ARTIFACTS TO RIGHT SPOT
 
         if (numArtifacts == 0) return InstantAction {}
 
         if (numArtifacts == 1) return SequentialAction(
+            spin(motif.first),
             SleepAction(0.5),
             compositionLaunch(distance, true),
         )
 
         if (numArtifacts == 2) return SequentialAction(
+            spin(motif.first),
             SleepAction(0.5),
             compositionLaunch(distance, false),
+            spin(motif.second),
             SleepAction(0.5),
             compositionLaunch(distance, true),
         )
 
         if (numArtifacts == 3) return SequentialAction(
+            spin(motif.first),
             SleepAction(0.5),
             compositionLaunch(distance, false),
+            spin(motif.second),
             SleepAction(0.5),
             compositionLaunch(distance, false),
+            spin(motif.third),
             SleepAction(0.5),
             compositionLaunch(distance, true),
         )
@@ -618,7 +716,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         return InstantAction {} // impossible case
     }
 
-    fun intakeUntilDetectedOrTimeout(): Action {
+    fun intakeUntilIndexedOrTimeout(): Action {
         return object : Action {
             private var firstRun = true
             private val timer = ElapsedTime()
@@ -635,11 +733,19 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 if ((artifacts.intakeArtifact == ArtifactColors.NONE && detectedArtifact != ArtifactColors.NONE)
                     || timer.seconds() > 1.5) {
                     artifacts.intake(detectedArtifact)
+                    runBlocking(spin())
                     intakeOff()
                     return false
                 }
                 return true
             }
+        }
+    }
+
+    fun spin(color: ArtifactColors = ArtifactColors.NONE): Action {
+        return Action {
+            rotateSpindexer(artifacts.rotate(color))
+            spindexer.error > TOLERANCE_DEGREES // run until in tolerance range
         }
     }
     // endregion
@@ -671,6 +777,12 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         PROP(0.65),
         DOWN(0.43),
     }
+
+    enum class Offset(val offsetDeg: Double) {
+        NONE(0.0),
+        LAUNCH(LAUNCH_OFFSET_DEGREES),
+        STORAGE(STORAGE_OFFSET_DEGREES),
+    }
     // endregion
 
     class ArtifactData {
@@ -684,10 +796,6 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
          * @return Position that the current lower artifact should end up in.
          */
         fun rotate(wantedColor: ArtifactColors = ArtifactColors.NONE): Position {
-            // fixme: bug situation
-            //   one in storage, one in intake
-            //   "go outtake" -> pushed into intake and outtake instead of outtake and storage
-
             val colorPos = color(wantedColor) // where is the color we want?
 
             // we are looking for an artifact and hold it
@@ -707,24 +815,26 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 return Position.OUTTAKE
             }
 
+            // fixme: bug situation
+            //   one in storage, one in intake
+            //   "go outtake" -> pushed into intake and outtake instead of outtake and storage
+
             // we aren't looking for an artifact or we don't hold it
-            if (intakeArtifact != ArtifactColors.NONE) {
-                // always want a 'NONE' in the intake; we should rotate such that both of our backs are filled
-                if (outtakeArtifact == ArtifactColors.NONE) {
-                    rotate(Position.STORAGE)
-                    return Position.STORAGE
-                    // We rotate to RIGHT not LEFT so that if there is an artifact in the RIGHT
-                    // it is kept in the rear not brought to intake
-                }
-
-                if (storageArtifact == ArtifactColors.NONE) {
-                    rotate(Position.OUTTAKE)
-                    return Position.OUTTAKE
-                    // above but reversed
-                }
-
-                // nowhere to put the intakeArtifact
+            // always want a 'NONE' in the intake, so we should rotate such that both of our backs are filled
+            if (outtakeArtifact == ArtifactColors.NONE) {
+                rotate(Position.STORAGE)
+                return Position.STORAGE
+                // We rotate to RIGHT not LEFT so that if there is an artifact in the RIGHT
+                // it is kept in the rear not brought to intake
             }
+
+            if (storageArtifact == ArtifactColors.NONE) {
+                rotate(Position.OUTTAKE)
+                return Position.OUTTAKE
+                // above but reversed
+            }
+
+            // nowhere to put the intakeArtifact
 
             // todo optimal storage: purple in left (more likely to want)
 
@@ -838,5 +948,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
         @JvmField var CUSTOM: Double = 0.0
         @JvmField var SPINDEXER_ROTATE_DEGREES = 120.0
+        @JvmField var STORAGE_OFFSET_DEGREES = 15.0
+        @JvmField var LAUNCH_OFFSET_DEGREES = 100.0
+        @JvmField var TOLERANCE_DEGREES = 10.0
     }
 }
