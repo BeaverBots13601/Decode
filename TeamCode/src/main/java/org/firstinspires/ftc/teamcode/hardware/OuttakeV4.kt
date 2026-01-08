@@ -7,9 +7,9 @@ import com.acmerobotics.roadrunner.Action
 import com.acmerobotics.roadrunner.InstantAction
 import com.acmerobotics.roadrunner.ParallelAction
 import com.acmerobotics.roadrunner.SequentialAction
-import com.acmerobotics.roadrunner.SleepAction
 import com.acmerobotics.roadrunner.clamp
 import com.acmerobotics.roadrunner.ftc.runBlocking
+import com.acmerobotics.roadrunner.now
 import com.qualcomm.hardware.rev.RevColorSensorV3
 import com.qualcomm.robotcore.hardware.DcMotor.RunMode
 import com.qualcomm.robotcore.hardware.DcMotorSimple
@@ -132,6 +132,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         spindexer.update()
         turntable.update()
 
+        telemetry.addData("Offset", currentOffset)
+
         // region !!! EMERGENCY !!!
         if (data.currentGamepadTwo.psWasPressed()) { emergencyModeActive = !emergencyModeActive }
 
@@ -191,6 +193,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
             }
 
             if (data.currentGamepadTwo.crossWasPressed()) { numPurple = numPurple?.plus(1) }
+
+            if (data.currentGamepadOne.squareWasPressed()) { numPurple = null }
 
             return
         } else if (launchAction != null) {
@@ -274,6 +278,11 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 DriveTrainKt.getInstance()
                     ?.setDriveMotors(arrayOf(0.0, 0.0, 0.0, 0.0), RunMode.RUN_USING_ENCODER)
                 runBlocking(launch())
+                if (artifacts.artifactsHeld != 0) {
+                    rotateSpindexer(artifacts.rotate())
+                } else {
+                    offsetSpindexer(Offset.NONE)
+                }
                 awaitingLaunch = ArtifactColors.NONE
             } else if (launchArtifact != Position.NONE) { // In wrong spot
                 // Queue for rotation and then wait for wheel to move
@@ -387,15 +396,15 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         rightIntakePropBar.position = RightPropBarPosition.DOWN.pos
     }
 
-    private var offset = Offset.NONE
+    private var currentOffset = Offset.NONE
 
     /**
-     * Physically rotate the current artifacts.
+     * Physically rotate the current artifacts. Ends with no offset.
      * @param position Position that the current intake artifact will end up in.
      */
-    fun rotateSpindexer(position: Position) { // ending w/ no offset
-        val offsetDeg = offset.offsetDeg // how much we are currently offset in negative direction
-        offset = Offset.NONE
+    fun rotateSpindexer(position: Position) {
+        val offsetDeg = currentOffset.offsetDeg // how much we are currently offset in negative direction
+        currentOffset = Offset.NONE
         if (position == Position.OUTTAKE) {
             spindexer.targetPosition = spindexer.targetPosition?.plus((SPINDEXER_ROTATE_DEGREES * 2) + offsetDeg)
         } else if (position == Position.STORAGE) {
@@ -404,7 +413,13 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     }
 
     fun rotateSpindexerForLaunch() { // ending with LAUNCH offset
-        spindexer.targetPosition = when (offset) {
+        if (artifacts.artifactsHeld == 2 && artifacts.intakeArtifact == ArtifactColors.NONE) {
+            // special case: need to bring to where we hit
+            artifacts.rotate(Position.STORAGE)
+            rotateSpindexer(Position.STORAGE)
+            runBlocking(sleepAndUpdate(3.0)) // fixme way too long
+        }
+        spindexer.targetPosition = when (currentOffset) {
             Offset.LAUNCH -> {
                 // already offset just go more
                 spindexer.targetPosition?.minus(SPINDEXER_ROTATE_DEGREES)
@@ -419,24 +434,24 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 spindexer.targetPosition?.minus(SPINDEXER_ROTATE_DEGREES + offsetDeg)
             }
         }
-        offset = Offset.LAUNCH
+        currentOffset = Offset.LAUNCH
     }
 
     fun offsetSpindexer(newOffset: Offset) {
-        if (newOffset == offset) return
+        if (newOffset == currentOffset) return
         if (newOffset == Offset.NONE) {
             // We're always just undoing our current offset
-            spindexer.targetPosition = spindexer.targetPosition?.plus(offset.offsetDeg)
-            offset = newOffset
+            spindexer.targetPosition = spindexer.targetPosition?.plus(currentOffset.offsetDeg)
+            currentOffset = newOffset
             return
         }
-        spindexer.targetPosition = when (offset) {
+        spindexer.targetPosition = when (currentOffset) {
             Offset.STORAGE -> { // storage -> launch
-                val offsetDeg: Double = TODO()
+                val offsetDeg = Offset.LAUNCH.offsetDeg - Offset.STORAGE.offsetDeg
                 spindexer.targetPosition?.plus(offsetDeg)
             }
             Offset.LAUNCH -> { // launch -> storage
-                val offsetDeg: Double = TODO()
+                val offsetDeg = Offset.STORAGE.offsetDeg - Offset.LAUNCH.offsetDeg
                 spindexer.targetPosition?.plus(offsetDeg)
             }
             Offset.NONE -> { // none -> launch or storage
@@ -452,7 +467,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
             }
         }
-        offset = newOffset
+        currentOffset = newOffset
     }
 
     private fun setLEDs() {
@@ -564,9 +579,13 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         return when(kick) {
             true -> {
                 SequentialAction(
+                    InstantAction { offsetSpindexer(Offset.LAUNCH) },
+                    sleepAndUpdate(2.0),
                     InstantAction { kicker.position = KickerPosition.KICK.pos },
-                    SleepAction(0.75),
+                    InstantAction { booster.power = 1.0 },
+                    sleepAndUpdate(0.75),
                     InstantAction { kicker.position = KickerPosition.NOT_KICK.pos },
+                    InstantAction { booster.power = 0.0 },
                     InstantAction { artifacts.launched() },
                 )
             }
@@ -574,13 +593,36 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 SequentialAction(
                     // pushes artifact into launch
                     InstantAction { rotateSpindexerForLaunch() },
-                    waitUntilLaunched(1.0),
+                    InstantAction { booster.power = 1.0 },
+                    sleepAndUpdate(2.5),
+                    InstantAction { booster.power = 0.0 },
                     InstantAction { artifacts.launched() },
                 )
             }
             null -> {
                 // Kick if holding only one
                 return launch(artifacts.artifactsHeld == 1)
+            }
+        }
+    }
+
+    fun sleepAndUpdate(dt: Double): Action {
+        return object : Action {
+            private var beginTs = -1.0
+
+            override fun run(p: TelemetryPacket): Boolean {
+                flywheel.setVelocity(currentLaunchDistance.velocity)
+                turntable.update()
+                spindexer.update()
+
+                val t = if (beginTs < 0) {
+                    beginTs = now()
+                    0.0
+                } else {
+                    now() - beginTs
+                }
+
+                return t < dt
             }
         }
     }
@@ -636,12 +678,16 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     /**
      * Watches the flywheel until launched, or until *timeout* seconds have passed.
      */
-    fun waitUntilLaunched(timeout: Double): Action { // todo: rework
+    fun waitUntilLaunched(timeout: Double): Action {
         return object : Action {
             private var lastVelocity = 0.0
             private val timer = ElapsedTime()
             override fun run(p: TelemetryPacket): Boolean {
                 val averageVelocity = flywheel.velocity
+
+                flywheel.setVelocity(currentLaunchDistance.velocity)
+                turntable.update()
+                spindexer.update()
 
                 // Monitor for big loss in velocity
                 if ((lastVelocity - averageVelocity) > 50.0 || timer.seconds() > timeout) {
@@ -658,7 +704,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
     }
 
-    fun waitForSpunUp(distance: LaunchDistance): Action { // todo: rework
+    fun waitForSpunUp(distance: LaunchDistance): Action {
         return Action {
             val averageVelocity = flywheel.velocity
             if (abs(averageVelocity - distance.velocity) < 100) {
@@ -687,29 +733,32 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
         if (numArtifacts == 1) return SequentialAction(
             spin(motif.first),
-            SleepAction(0.5),
+            sleepAndUpdate(0.5),
             compositionLaunch(distance, true),
-        )
+            InstantAction { offsetSpindexer(Offset.NONE) },
+            )
 
         if (numArtifacts == 2) return SequentialAction(
             spin(motif.first),
-            SleepAction(0.5),
+            sleepAndUpdate(0.5),
             compositionLaunch(distance, false),
             spin(motif.second),
-            SleepAction(0.5),
+            sleepAndUpdate(0.5),
             compositionLaunch(distance, true),
-        )
+            InstantAction { offsetSpindexer(Offset.NONE) },
+            )
 
         if (numArtifacts == 3) return SequentialAction(
             spin(motif.first),
-            SleepAction(0.5),
+            sleepAndUpdate(0.5),
             compositionLaunch(distance, false),
             spin(motif.second),
-            SleepAction(0.5),
+            sleepAndUpdate(0.5),
             compositionLaunch(distance, false),
             spin(motif.third),
-            SleepAction(0.5),
+            sleepAndUpdate(0.5),
             compositionLaunch(distance, true),
+            InstantAction { offsetSpindexer(Offset.NONE) },
         )
 
         RobotLog.ee("OuttakeV4", "Impossible Case! Aaa!")
@@ -743,9 +792,15 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     }
 
     fun spin(color: ArtifactColors = ArtifactColors.NONE): Action {
-        return Action {
-            rotateSpindexer(artifacts.rotate(color))
-            spindexer.error > TOLERANCE_DEGREES // run until in tolerance range
+        return object : Action {
+            var firstRun = true
+            override fun run(p: TelemetryPacket): Boolean {
+                if (firstRun) {
+                    rotateSpindexer(artifacts.rotate(color))
+                    firstRun = false
+                }
+                return spindexer.error > TOLERANCE_DEGREES // run until in tolerance range
+            }
         }
     }
     // endregion
@@ -822,16 +877,15 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
             // we aren't looking for an artifact or we don't hold it
             // always want a 'NONE' in the intake, so we should rotate such that both of our backs are filled
             if (outtakeArtifact == ArtifactColors.NONE) {
-                rotate(Position.STORAGE)
-                return Position.STORAGE
-                // We rotate to RIGHT not LEFT so that if there is an artifact in the RIGHT
-                // it is kept in the rear not brought to intake
+                rotate(Position.OUTTAKE)
+                return Position.OUTTAKE
             }
 
             if (storageArtifact == ArtifactColors.NONE) {
+                // bring this one to outtake because that will also bring the current out to storage
+                // and leave intake empty
                 rotate(Position.OUTTAKE)
                 return Position.OUTTAKE
-                // above but reversed
             }
 
             // nowhere to put the intakeArtifact
@@ -948,8 +1002,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
         @JvmField var CUSTOM: Double = 0.0
         @JvmField var SPINDEXER_ROTATE_DEGREES = 120.0
-        @JvmField var STORAGE_OFFSET_DEGREES = 15.0
-        @JvmField var LAUNCH_OFFSET_DEGREES = 100.0
-        @JvmField var TOLERANCE_DEGREES = 10.0
+        @JvmField var STORAGE_OFFSET_DEGREES = 10.0
+        @JvmField var LAUNCH_OFFSET_DEGREES = 130.0
+        @JvmField var TOLERANCE_DEGREES = 15.0
     }
 }
