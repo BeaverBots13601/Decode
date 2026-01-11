@@ -45,7 +45,7 @@ class RiserV2 private constructor(hardwareMap: HardwareMap, initData: InitData, 
         }
 
         // braking
-        if (data.currentGamepadOne.triangle) {
+        if (data.currentGamepadOne.triangleWasPressed()) {
             toggleBrakes()
         }
     }

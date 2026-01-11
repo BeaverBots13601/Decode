@@ -199,6 +199,10 @@ class AxonDriver(
      * Set to null to disable override control.
      */
     var overridePower: Double? = null
+        set(it) {
+            field = it
+            if (it != null) axonServo.power = it
+        }
     // endregion
 
     fun cleanUp() = thread.interrupt()

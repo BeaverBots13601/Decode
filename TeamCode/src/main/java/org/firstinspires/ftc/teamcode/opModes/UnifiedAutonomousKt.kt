@@ -85,7 +85,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 RouteParameters(
                     Pose2d(-24.0, -24.0, -3 * PI / 4),
 //                    Pose2d(-24.0, -24.0, -21 * PI / 32),
-                    OuttakeV4.LaunchDistance.CLOSE,
+                    OuttakeV4.LaunchDistance.CLOSE_MID,
                     ArtifactPositions.BLUE_CLOSE,
                     ArtifactPositions.BLUE_MID,
                     ArtifactPositions.BLUE_FAR,
@@ -97,7 +97,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 RouteParameters(
                     Pose2d(-24.0, 24.0, 3 * PI / 4),
 //                    Pose2d(-24.0, 24.0, 21 * PI / 32),
-                    OuttakeV4.LaunchDistance.CLOSE,
+                    OuttakeV4.LaunchDistance.CLOSE_MID,
                     ArtifactPositions.RED_CLOSE,
                     ArtifactPositions.RED_MID,
                     ArtifactPositions.RED_FAR,
