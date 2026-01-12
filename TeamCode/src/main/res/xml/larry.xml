@@ -6,10 +6,10 @@
             <goBILDA5202SeriesMotor name="rightBack" port="0" />
 
             <!-- Outtake (motors uncertain) -->
-            <Matrix12vMotor name="counterspin" port="1" />
+            <Matrix12vMotor name="counterspin" port="2" />
             <Matrix12vMotor name="flywheel" port="3" />
             <Servo name="kicker" port="2" />
-            <goBILDA5202SeriesMotor name="boosterMotor" port="2" />
+            <goBILDA5202SeriesMotor name="boosterMotor" port="1" />
 
             <!-- Intake -->
             <Servo name="leftIntakePropBar" port="4" />

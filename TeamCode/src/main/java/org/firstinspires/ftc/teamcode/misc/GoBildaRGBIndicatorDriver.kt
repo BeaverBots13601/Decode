@@ -20,7 +20,7 @@ class GoBildaRGBIndicatorDriver(val indicator: Servo) {
 
     enum class Color(val servoPos: Double) {
         OFF(0.0),
-        RED(0.277),
+        RED(0.28), // docs say 0.277 but that's a tiny bit too low
         ORANGE(0.333),
         YELLOW(0.388),
         SAGE(0.444),
