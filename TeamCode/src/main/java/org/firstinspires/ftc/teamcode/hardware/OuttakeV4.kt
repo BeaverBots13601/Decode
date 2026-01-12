@@ -52,10 +52,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         telemetry,
     )
 
-    // Kicker
-    private val kicker = hardwareMap.servo.get("kicker").apply {
-        position = KickerPosition.NOT_KICK.pos
-    }
+    // Booster
     private val booster = createDefaultMotor(hardwareMap, "boosterMotor")
 
     // Intake
@@ -63,10 +60,10 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         direction = DcMotorSimple.Direction.REVERSE
     }
     private val leftIntakePropBar = hardwareMap.servo.get("leftIntakePropBar").apply {
-        position = LeftPropBarPosition.DOWN.pos
+        position = 0.82 // calibrated
     }
     private val rightIntakePropBar = hardwareMap.servo.get("rightIntakePropBar").apply {
-        position = RightPropBarPosition.DOWN.pos
+        position = 0.43 // calibrated
     }
 
     // Color Sensors
@@ -140,15 +137,15 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         if (emergencyModeActive) {
             if (data.currentGamepadTwo.dpad_down) {
                 flywheel.setVelocity(-1000000.0)
-                booster.power = 1.0
+                boosterOn()
             } else if (data.currentGamepadTwo.dpad_up) {
                 flywheel.setVelocity(1000000.0)
-                booster.power = 1.0
+                boosterOn()
             } else if (data.currentGamepadTwo.dpadLeftWasPressed() || data.currentGamepadTwo.dpadRightWasPressed()) {
-                runBlocking(launch(true))
+                runBlocking(launch())
             } else {
                 flywheel.setVelocity(null)
-                booster.power = 0.0
+                boosterOff()
             }
 
             spindexer.overridePower = if (data.currentGamepadTwo.right_bumper) {
@@ -250,7 +247,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
 
         if (data.currentGamepadTwo.dpadRightWasPressed()) {
-            //currentLaunchDistance = LaunchDistance.CLOSE_PEAK
+            currentLaunchDistance = LaunchDistance.CLOSE_PEAK
         }
 
         if (data.currentGamepadTwo.dpadDownWasPressed()) {
@@ -258,7 +255,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
 
         if (data.currentGamepadTwo.dpadLeftWasPressed()) {
-            //currentLaunchDistance = LaunchDistance.CLOSE_FAR
+            currentLaunchDistance = LaunchDistance.CLOSE_FAR
         }
         // endregion
 
@@ -303,11 +300,11 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
         // region Flywheels (on trigger)
         if (data.currentGamepadTwo.right_trigger < 0.5) {
-            booster.power = 0.0
+            boosterOff()
             telemetry.addData("Target Velocity (tps)", 0.0)
             flywheel.setVelocity(null) // disable control
         } else {
-            booster.power = 1.0
+            boosterOn()
             val vel = if (CUSTOM != 0.0) CUSTOM else currentLaunchDistance.velocity
             telemetry.addData("Target Velocity (tps)", vel)
             flywheel.setVelocity(vel)
@@ -353,15 +350,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     // region Hardware Functions
     private var intakeActive = false
-    fun toggleIntake() {
-        if (intakeActive) {
-            intakeMotor.power = 0.0
-            intakeActive = false
-        } else {
-            intakeMotor.power = 0.85
-            intakeActive = true
-        }
-    }
+    fun toggleIntake() = if (intakeActive) intakeOff() else intakeOn()
 
     fun intakeOff() {
         intakeMotor.power = 0.0
@@ -378,6 +367,20 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         intakeActive = true
     }
 
+    // Booster
+    private var boosterActive = false
+    fun toggleBooster() = if (boosterActive) boosterOff() else boosterOn()
+
+    fun boosterOff() {
+        booster.power = 0.0
+        boosterActive = false
+    }
+
+    fun boosterOn() {
+        booster.power = 1.0
+        boosterActive = true
+    }
+
     fun flywheelSpunUp(): Boolean {
         val velocity = flywheel.velocity
         val target = if (CUSTOM != 0.0) CUSTOM else currentLaunchDistance.velocity
@@ -389,16 +392,6 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         val target = spindexer.targetPosition ?: return true
 
         return abs(spindexer.position - target) < 10
-    }
-
-    fun liftIntakeBars() {
-        leftIntakePropBar.position  = LeftPropBarPosition.PROP.pos
-        rightIntakePropBar.position = RightPropBarPosition.PROP.pos
-    }
-
-    fun lowerIntakeBars() {
-        leftIntakePropBar.position  = LeftPropBarPosition.DOWN.pos
-        rightIntakePropBar.position = RightPropBarPosition.DOWN.pos
     }
 
     private var currentOffset = Offset.NONE
@@ -417,61 +410,34 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
     }
 
-    fun rotateSpindexerForLaunch() { // ending with LAUNCH offset
-        if (artifacts.artifactsHeld == 2 && artifacts.intakeArtifact == ArtifactColors.NONE) {
-            // special case: need to bring to where we hit
-            artifacts.rotate(Position.STORAGE)
-            rotateSpindexer(Position.STORAGE)
-            runBlocking(sleepAndUpdate(5.0)) // fixme way too long
-        }
-        spindexer.targetPosition = when (currentOffset) {
-            Offset.LAUNCH -> {
-                // already offset just go more
-                spindexer.targetPosition?.minus(SPINDEXER_ROTATE_DEGREES)
-            }
+    /**
+     * Ends with [Offset.STORAGE].
+     */
+    fun rotateSpindexerForLaunch(numToFire: Int) {
+        spindexer.targetPosition = when (currentOffset) { // from ??? -> STORAGE + launch
             Offset.NONE -> {
-                val offsetDeg = Offset.LAUNCH.offsetDeg // how much to be offset in negative
-                spindexer.targetPosition?.minus(SPINDEXER_ROTATE_DEGREES + offsetDeg)
+                // Move + add a storage offset because we need to have it
+                spindexer.targetPosition?.minus(
+                    (SPINDEXER_ROTATE_DEGREES * numToFire) + Offset.STORAGE.offsetDeg
+                )
             }
             Offset.STORAGE -> {
-                // do math to account for the difference
-                val offsetDeg = Offset.LAUNCH.offsetDeg - Offset.STORAGE.offsetDeg
-                spindexer.targetPosition?.minus(SPINDEXER_ROTATE_DEGREES + offsetDeg)
+                // Move; don't account for difference because we need it
+                spindexer.targetPosition?.minus(SPINDEXER_ROTATE_DEGREES * numToFire)
             }
         }
-//        artifacts.rotate(Position.STORAGE)
-        currentOffset = Offset.LAUNCH
+        currentOffset = Offset.STORAGE
     }
 
     fun offsetSpindexer(newOffset: Offset) {
-        if (newOffset == currentOffset) return
+        if (newOffset == currentOffset) return // Already there
+        // Must be going NONE -> STORAGE or vice versa
         if (newOffset == Offset.NONE) {
-            // We're always just undoing our current offset
+            // Must be going STORAGE -> NONE; always just undoing our current offset
             spindexer.targetPosition = spindexer.targetPosition?.plus(currentOffset.offsetDeg)
-            currentOffset = newOffset
-            return
-        }
-        spindexer.targetPosition = when (currentOffset) {
-            Offset.STORAGE -> { // storage -> launch
-                val offsetDeg = Offset.LAUNCH.offsetDeg - Offset.STORAGE.offsetDeg
-                spindexer.targetPosition?.plus(offsetDeg)
-            }
-            Offset.LAUNCH -> { // launch -> storage
-                val offsetDeg = Offset.STORAGE.offsetDeg - Offset.LAUNCH.offsetDeg
-                spindexer.targetPosition?.plus(offsetDeg)
-            }
-            Offset.NONE -> { // none -> launch or storage
-                when (newOffset) {
-                    Offset.LAUNCH -> {
-                        spindexer.targetPosition?.minus(Offset.LAUNCH.offsetDeg)
-                    }
-                    Offset.STORAGE -> {
-                        spindexer.targetPosition?.minus(Offset.STORAGE.offsetDeg)
-                    }
-                    Offset.NONE -> return // impossible case
-                }
-
-            }
+        } else {
+            // Must be going NONE -> STORAGE
+            spindexer.targetPosition = spindexer.targetPosition?.minus(Offset.STORAGE.offsetDeg)
         }
         currentOffset = newOffset
     }
@@ -578,46 +544,20 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     // region Roadrunner Actions
     /**
-     * Launch smartly, deciding whether a kick or a intake launch is required. Assumes the artifact
-     * to launch is in the Outtake position.
+     * Launch an artifact. Assumes the artifact to launch is in the Outtake position.
      */
-    fun launch(kick: Boolean? = null): Action {
-        return when(kick) {
-            true -> {
-                SequentialAction(
-                    InstantAction { intakeMotor.power = 1.0 },
-                    InstantAction { offsetSpindexer(Offset.LAUNCH) },
-                    sleepAndUpdate(2.5),
-                    InstantAction { kicker.position = KickerPosition.KICK.pos },
-                    InstantAction { booster.power = 1.0 },
-                    sleepAndUpdate(0.75),
-                    InstantAction { kicker.position = KickerPosition.NOT_KICK.pos },
-                    InstantAction { booster.power = 0.0 },
-                    InstantAction { artifacts.launched() },
-                    InstantAction { setLEDs() },
-                    InstantAction { intakeMotor.power = 0.0 },
-                )
-            }
-            false -> {
-                SequentialAction(
-                    // pushes artifact into launch
-                    InstantAction { intakeMotor.power = 1.0 },
-                    InstantAction { rotateSpindexerForLaunch() },
-                    InstantAction { booster.power = 1.0 },
-                    sleepAndUpdate(2.5),
-                    InstantAction { booster.power = 0.0 },
-                    InstantAction { artifacts.launched() },
-                    sleepAndUpdate(2.5),
-                    InstantAction { setLEDs() },
-                    InstantAction { intakeMotor.power = 0.0 },
-                )
-            }
-            null -> {
-                // Kick if holding only one
-                return launch(artifacts.artifactsHeld == 1)
-            }
-        }
-
+    fun launch(): Action {
+        return SequentialAction(
+            // pushes artifact into launch
+            InstantAction { intakeOn() },
+            InstantAction { rotateSpindexerForLaunch(1) },
+            InstantAction { boosterOn() },
+            sleepAndUpdate(2.5),
+            InstantAction { boosterOff() },
+            InstantAction { artifacts.launched() },
+            InstantAction { setLEDs() },
+            InstantAction { intakeOff() },
+        )
     }
 
     fun sleepAndUpdate(dt: Double): Action {
@@ -677,7 +617,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 flywheel.setVelocity(distance.velocity)
                 turntable.update()
                 spindexer.update()
-                booster.power = 1.0
+                boosterOn()
 
                 val averageVelocity = flywheel.velocity
                 if (!spunUp && abs(abs(averageVelocity) - distance.velocity) < 100) {
@@ -692,7 +632,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 if ((lastVelocity - averageVelocity) > 50.0 || timer.seconds() > timeout) {
                     p.put("Current Speed", averageVelocity)
                     flywheel.setVelocity(null)
-                    booster.power = 0.0
+                    boosterOff()
                     return false // big drop, all done, or timed out
                 }
 
@@ -731,7 +671,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 if ((lastVelocity - averageVelocity) > 50.0 || timer.seconds() > timeout) {
                     p.put("Current Speed", averageVelocity)
                     flywheel.setVelocity(null)
-                    booster.power = 0.0
+                    boosterOff()
                     return false // big drop & all done, or timed out
                 }
 
@@ -752,14 +692,14 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     }
 
     /**
-     * Assumes the artifact you are launching is ready.
+     * Assumes the artifact you are launching is ready in the OUTTAKE position. Ends with a NONE offset.
      */
-    fun compositionLaunch(distance: LaunchDistance, kick: Boolean? = null): Action {
+    fun compositionLaunch(distance: LaunchDistance): Action {
         return ParallelAction(
             spinUpUntilLaunched(distance),
             SequentialAction(
                 waitForSpunUp(distance),
-                launch(kick),
+                launch(),
             )
         )
     }
@@ -772,31 +712,28 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         if (numArtifacts == 1) return SequentialAction(
             spin(motif.first),
             sleepAndUpdate(0.5),
-            compositionLaunch(distance, true),
-            InstantAction { offsetSpindexer(Offset.NONE) },
+            compositionLaunch(distance),
             )
 
         if (numArtifacts == 2) return SequentialAction(
             spin(motif.first),
             sleepAndUpdate(0.5),
-            compositionLaunch(distance, false),
+            compositionLaunch(distance),
             spin(motif.second),
             sleepAndUpdate(0.5),
-            compositionLaunch(distance, true),
-            InstantAction { offsetSpindexer(Offset.NONE) },
+            compositionLaunch(distance),
             )
 
         if (numArtifacts == 3) return SequentialAction(
             spin(motif.first),
             sleepAndUpdate(0.5),
-            compositionLaunch(distance, false),
+            compositionLaunch(distance),
             spin(motif.second),
             sleepAndUpdate(0.5),
-            compositionLaunch(distance, false),
+            compositionLaunch(distance),
             spin(motif.third),
             sleepAndUpdate(0.5),
-            compositionLaunch(distance, true),
-            InstantAction { offsetSpindexer(Offset.NONE) },
+            compositionLaunch(distance),
         )
 
         RobotLog.ee("OuttakeV4", "Impossible Case! Aaa!")
@@ -810,19 +747,18 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
         if (numArtifacts == 1) return ParallelAction(
             SequentialAction(
-                InstantAction { intakeMotor.power = 0.85 },
-                sleepAndOverrideSpindexer(1.0, -1.0),
-                InstantAction {
-                    spindexer.update()
-                    spindexer.targetPosition = spindexer.position - spindexer.position.mod(120.0) // cancel rotation
-                    spindexer.overridePower = null
-                },
-                sleepAndUpdate(2.0),
-                compositionLaunch(distance, true),
-                InstantAction {
-                    intakeMotor.power = 0.0
-                    offsetSpindexer(Offset.NONE)
-                },
+                InstantAction { intakeOn() },
+                //sleepAndOverrideSpindexer(1.0, -1.0),
+                InstantAction { rotateSpindexerForLaunch(3) }, // launches all
+                sleepAndUpdate(1.5),
+//                InstantAction {
+//                    spindexer.update()
+//                    spindexer.targetPosition = spindexer.position - spindexer.position.mod(120.0) // cancel rotation
+//                    spindexer.overridePower = null
+//                },
+//                sleepAndUpdate(1.5),
+//                compositionLaunch(distance),
+                InstantAction { intakeOff() },
             ),
             SequentialAction(
                 spinUpUntilLaunched(distance, 4.0),
@@ -832,7 +768,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
         if (numArtifacts == 2) return ParallelAction(
             SequentialAction(
-                InstantAction { intakeMotor.power = 0.85 },
+                InstantAction { intakeOn() },
                 sleepAndOverrideSpindexer(1.5, -1.0),
                 InstantAction {
                     spindexer.update()
@@ -840,11 +776,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                     spindexer.overridePower = null
                 },
                 sleepAndUpdate(1.5),
-                compositionLaunch(distance, true),
-                InstantAction {
-                    intakeMotor.power = 0.0
-                    offsetSpindexer(Offset.NONE)
-                },
+                compositionLaunch(distance),
+                InstantAction { intakeOff() },
             ),
             SequentialAction(
                 spinUpUntilLaunched(distance, 2.5),
@@ -855,7 +788,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         artifacts.allLaunched()
         if (numArtifacts == 3) return ParallelAction(
             SequentialAction(
-                InstantAction { intakeMotor.power = 0.85 },
+                InstantAction { intakeOn() },
                 sleepAndOverrideSpindexer(2.25, -1.0),
                 InstantAction {
                     spindexer.update()
@@ -863,11 +796,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                     spindexer.overridePower = null
                 },
                 sleepAndUpdate(1.5),
-                compositionLaunch(distance, true),
-                InstantAction {
-                    intakeMotor.power = 0.0
-                    offsetSpindexer(Offset.NONE)
-                },
+                compositionLaunch(distance),
+                InstantAction { intakeOff() },
             ),
             SequentialAction(
                 spinUpUntilLaunched(distance, 2.5),
@@ -936,24 +866,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         NONE,
     }
 
-    enum class KickerPosition(val pos: Double) {
-        KICK(0.85),
-        NOT_KICK(0.05),
-    }
-
-    enum class LeftPropBarPosition(val pos: Double) {
-        PROP(0.60),
-        DOWN(0.82),
-    }
-
-    enum class RightPropBarPosition(val pos: Double) {
-        PROP(0.65),
-        DOWN(0.43),
-    }
-
     enum class Offset(val offsetDeg: Double) {
         NONE(0.0),
-        LAUNCH(LAUNCH_OFFSET_DEGREES),
         STORAGE(STORAGE_OFFSET_DEGREES),
     }
     // endregion
@@ -1103,9 +1017,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 return artifact1 // in agreement
             }
 
-            if ((artifact1 == ArtifactColors.NONE && artifact2 != ArtifactColors.NONE)
-                || (artifact1 != ArtifactColors.NONE && artifact2 == ArtifactColors.NONE)) {
-                // use the one that detects
+            if (artifact1 == ArtifactColors.NONE || artifact2 == ArtifactColors.NONE) {
+                // only one has detected; use it
                 return if (artifact1 == ArtifactColors.NONE) artifact2 else artifact1
             }
 
@@ -1127,7 +1040,6 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         @JvmField var CUSTOM: Double = 0.0
         @JvmField var SPINDEXER_ROTATE_DEGREES = 120.0
         @JvmField var STORAGE_OFFSET_DEGREES = 10.0
-        @JvmField var LAUNCH_OFFSET_DEGREES = 80.0
         @JvmField var TOLERANCE_DEGREES = 15.0
     }
 }
