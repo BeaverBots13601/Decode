@@ -271,22 +271,22 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         telemetry.update()
         motif = motif ?: Motif.GREEN_PURPLE_PURPLE // default
 
-        thread.start()
+        //thread.start()
 
-        if (currentLocation == Locations.RedFar || currentLocation == Locations.BlueFar) {
-            runBlocking(SleepAction(3.0))
-        } else {
-            runBlocking(SleepAction(1.5))
-        }
+//        if (currentLocation == Locations.RedFar || currentLocation == Locations.BlueFar) {
+//            runBlocking(SleepAction(3.0))
+//        } else {
+//            runBlocking(SleepAction(1.5))
+//        }
         runBlocking(toLaunchAction)
         out.intakeOn()
-        runBlocking(out.launchAllHeld(launchDistance, motif))
+        runBlocking(out.launchAllHeld(launchDistance))
         runBlocking(firstGroup)
-        runBlocking(out.launchAllHeld(launchDistance, motif))
+        runBlocking(out.launchAllHeld(launchDistance))
         runBlocking(secondGroup)
-        runBlocking(out.launchAllHeld(launchDistance, motif))
+        runBlocking(out.launchAllHeld(launchDistance))
         runBlocking(thirdGroup)
-        runBlocking(out.launchAllHeld(launchDistance, motif))
+        runBlocking(out.launchAllHeld(launchDistance))
         runBlocking(toPark)
 
         out.stop()

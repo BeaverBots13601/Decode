@@ -991,8 +991,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
 
         fun autoArtifactPreloads() {
-            intakeArtifact = ArtifactColors.PURPLE
             outtakeArtifact = ArtifactColors.GREEN
+            intakeArtifact = ArtifactColors.PURPLE
             storageArtifact = ArtifactColors.PURPLE
         }
 
