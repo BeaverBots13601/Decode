@@ -88,9 +88,10 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         hardwareMap,
         "spindexerAxon",
         "spindexerEncoder",
-        0.006,
-        0.0005,
-        0.00005,
+        0.006, // 0.0066
+        0.0005, // 0.0528
+        0.00005, // 0.00018
+        // ku = 0.011; tu = 1/4
         telemetry,
     ).apply {
         targetPosition = 0.0
@@ -747,18 +748,21 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
         if (numArtifacts == 1) return ParallelAction(
             SequentialAction(
-                InstantAction { intakeOn() },
-                //sleepAndOverrideSpindexer(1.0, -1.0),
-                InstantAction { rotateSpindexerForLaunch(3) }, // launches all
-                sleepAndUpdate(1.5),
-//                InstantAction {
-//                    spindexer.update()
-//                    spindexer.targetPosition = spindexer.position - spindexer.position.mod(120.0) // cancel rotation
-//                    spindexer.overridePower = null
-//                },
-//                sleepAndUpdate(1.5),
-//                compositionLaunch(distance),
-                InstantAction { intakeOff() },
+                InstantAction {
+                    intakeOn()
+                    boosterOn()
+                },
+                sleepAndOverrideSpindexer(1.0, -1.0),
+                InstantAction {
+                    spindexer.update()
+                    spindexer.targetPosition = spindexer.position - spindexer.position.mod(120.0) // cancel rotation
+                    spindexer.overridePower = null
+                },
+                sleepAndUpdate(1.0),
+                InstantAction {
+                    intakeOff()
+                    boosterOff()
+                },
             ),
             SequentialAction(
                 spinUpUntilLaunched(distance, 4.0),
@@ -768,16 +772,21 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
         if (numArtifacts == 2) return ParallelAction(
             SequentialAction(
-                InstantAction { intakeOn() },
-                sleepAndOverrideSpindexer(1.5, -1.0),
+                InstantAction {
+                    intakeOn()
+                    boosterOn()
+                },
+                sleepAndOverrideSpindexer(2.0, -1.0),
                 InstantAction {
                     spindexer.update()
                     spindexer.targetPosition = spindexer.position - spindexer.position.mod(120.0) // cancel rotation
                     spindexer.overridePower = null
                 },
-                sleepAndUpdate(1.5),
-                compositionLaunch(distance),
-                InstantAction { intakeOff() },
+                sleepAndUpdate(1.0),
+                InstantAction {
+                    intakeOff()
+                    boosterOff()
+                },
             ),
             SequentialAction(
                 spinUpUntilLaunched(distance, 2.5),
@@ -788,16 +797,21 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         artifacts.allLaunched()
         if (numArtifacts == 3) return ParallelAction(
             SequentialAction(
-                InstantAction { intakeOn() },
-                sleepAndOverrideSpindexer(2.25, -1.0),
+                InstantAction {
+                    intakeOn()
+                    boosterOn()
+                },
+                sleepAndOverrideSpindexer(3.0, -1.0),
                 InstantAction {
                     spindexer.update()
                     spindexer.targetPosition = spindexer.position - spindexer.position.mod(120.0) // cancel rotation
                     spindexer.overridePower = null
                 },
-                sleepAndUpdate(1.5),
-                compositionLaunch(distance),
-                InstantAction { intakeOff() },
+                sleepAndUpdate(1.0),
+                InstantAction {
+                    intakeOff()
+                    boosterOff()
+                },
             ),
             SequentialAction(
                 spinUpUntilLaunched(distance, 2.5),
@@ -1027,9 +1041,9 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
 
         private fun detectArtifact(data: NormalizedRGBA): ArtifactColors {
-            return if (data.blue > 0.003 && data.blue > data.green) {
+            return if (data.blue > 0.03 && data.blue > data.green) {
                 ArtifactColors.PURPLE
-            } else if (data.green > 0.003 && data.green > data.blue && data.green > data.red) {
+            } else if (data.green > 0.03 && data.green > data.blue && data.green > data.red) {
                 ArtifactColors.GREEN
             } else {
                 ArtifactColors.NONE

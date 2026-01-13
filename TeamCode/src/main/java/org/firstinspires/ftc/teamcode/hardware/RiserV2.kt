@@ -69,7 +69,7 @@ class RiserV2 private constructor(hardwareMap: HardwareMap, initData: InitData, 
 
     enum class LiftPosition(val pos: Double) {
         LIFT(1.0),
-        NO_LIFT(0.2),
+        NO_LIFT(0.0),
     }
 
     enum class LeftBrakePosition(val pos: Double) {
@@ -80,7 +80,7 @@ class RiserV2 private constructor(hardwareMap: HardwareMap, initData: InitData, 
     enum class RightBrakePosition(val pos: Double) {
         BRAKE(0.45), // todo
         LIFT(0.8),
-        NO_BRAKE(0.2),
+        NO_BRAKE(0.19),
     }
 
     companion object : HardwareMechanismSingletonManager<RiserV2>(::RiserV2)
