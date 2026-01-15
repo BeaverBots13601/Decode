@@ -231,6 +231,11 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         var spindexerMoving = abs(spindexer.error) > TOLERANCE_DEGREES
 
         if (detectedArtifact != ArtifactColors.NONE && !spindexerMoving) {
+            if (artifacts.intakeArtifact == ArtifactColors.NONE) { // Just got one
+                data.gamepadOneReference.rumble(200)
+                data.gamepadTwoReference.rumble(200)
+            }
+
             artifacts.intake(detectedArtifact)
             val rotateTo = artifacts.rotate()
             rotateSpindexer(rotateTo)
@@ -762,6 +767,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction {
                     intakeOff()
                     boosterOff()
+                    artifacts.allLaunched()
                 },
             ),
             SequentialAction(
@@ -775,6 +781,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction {
                     intakeOn()
                     boosterOn()
+                    leftIntakePropBar.position =  .72
+                    rightIntakePropBar.position = .53
                 },
                 sleepAndOverrideSpindexer(2.0, -1.0),
                 InstantAction {
@@ -786,6 +794,9 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction {
                     intakeOff()
                     boosterOff()
+                    leftIntakePropBar.position = .82
+                    rightIntakePropBar.position = .43
+                    artifacts.allLaunched()
                 },
             ),
             SequentialAction(
@@ -794,12 +805,13 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
             )
         )
 
-        artifacts.allLaunched()
         if (numArtifacts == 3) return ParallelAction(
             SequentialAction(
                 InstantAction {
                     intakeOn()
                     boosterOn()
+                    leftIntakePropBar.position =  .72
+                    rightIntakePropBar.position = .53
                 },
                 sleepAndOverrideSpindexer(3.0, -1.0),
                 InstantAction {
@@ -811,6 +823,9 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction {
                     intakeOff()
                     boosterOff()
+                    leftIntakePropBar.position = .82
+                    rightIntakePropBar.position = .43
+                    artifacts.allLaunched()
                 },
             ),
             SequentialAction(
@@ -867,7 +882,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     // region Enums
     enum class LaunchDistance(val velocity: Double) {
-        FAR(1100.0),
+        FAR(1200.0),
         CLOSE_PEAK(900.0),
         CLOSE_FAR(950.0),
         CLOSE_MID(850.0),
