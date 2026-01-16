@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.hardware
 
 import com.acmerobotics.dashboard.FtcDashboard
+import com.acmerobotics.dashboard.canvas.Canvas
 import com.acmerobotics.dashboard.config.Config
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket
 import com.acmerobotics.roadrunner.Action
@@ -15,6 +16,7 @@ import com.qualcomm.robotcore.hardware.DcMotor.RunMode
 import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.HardwareMap
 import com.qualcomm.robotcore.hardware.NormalizedRGBA
+import com.qualcomm.robotcore.hardware.Servo
 import com.qualcomm.robotcore.util.ElapsedTime
 import com.qualcomm.robotcore.util.RobotLog
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
@@ -71,17 +73,28 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     private val rightIntakeColorSensor = hardwareMap.get(RevColorSensorV3::class.java, "rightIntakeColorSensor")
 
     // Turntable
-    private val turntable = AxonDriver(
-        hardwareMap,
-        "turntableAxon",
-        "turntableEncoder",
-        0.0,//0.008,
-        0.0,//0.096,
-        0.0,//0.00044, // todo: tune
-        // 0.04 = ku, 1/6 = tu   ??????
-        telemetry,
-        -2.0,
-    )
+    private val turntableAxon = runCatching {
+        hardwareMap.servo.get("turntableAxon").apply {
+            scaleRange(0.05, 0.93)
+            position = 0.5 // Start centered
+//            direction = Servo.Direction.REVERSE
+        }
+    }.getOrNull()
+
+    private val turntable = runCatching {
+        if (turntableAxon != null) throw Error()
+        AxonDriver(
+            hardwareMap,
+            "turntableAxon",
+            "turntableEncoder",
+            0.0,//0.008,
+            0.0,//0.096,
+            0.0,//0.00044, // todo: tune
+            // 0.04 = ku, 1/6 = tu   ??????
+            telemetry,
+            -2.0,
+        )
+    }.getOrNull()
 
     // Spindexer
     private val spindexer = AxonDriver(
@@ -104,7 +117,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     override fun start() {
         spindexer.start()
-        turntable.start()
+        turntable?.start()
     }
 
     // Config info
@@ -121,14 +134,14 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     // region Emergency Mode Stuff
     private var leftRed = true
     private val timer = ElapsedTime()
-    private var delta = 0.0
+    private var timeDelta = 0.0
     private var emergencyModeActive = false
     // endregion
 
     override fun run(data: RunData) {
         // update pid before the hijack so tracking is maintained
         spindexer.update()
-        turntable.update()
+        turntable?.update()
 
         telemetry.addData("Offset", currentOffset)
 
@@ -149,18 +162,20 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 boosterOff()
             }
 
+            spindexer.reset()
+
             spindexer.overridePower = if (data.currentGamepadTwo.right_bumper) {
                 0.2
             } else if (data.currentGamepadTwo.left_bumper) {
                 -0.2
             } else 0.0
 
-            delta += timer.seconds() - delta
-            if (delta > 0.75) {
+            timeDelta += timer.seconds() - timeDelta
+            if (timeDelta > 0.75) {
                 leftIndicatorLED.color = if (leftRed) Color.RED else Color.BLUE
                 rightIndicatorLED.color = if (leftRed) Color.BLUE else Color.RED
                 leftRed = !leftRed
-                delta = 0.0
+                timeDelta = 0.0
                 timer.reset()
             }
             return
@@ -176,7 +191,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
             numPurple = null
             return
 
-            turntable.overridePower = null
+            if (turntable != null) turntable.overridePower = null
             awaitingLaunch = ArtifactColors.NONE
             if (data.currentGamepadTwo.circleWasPressed()) {
                 // End evaluation; we can guess the motif from here
@@ -329,26 +344,41 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
 
         if (data.currentGamepadTwo.optionsWasPressed()) {
-            turntable.reset()
+            turntable?.reset()
         }
 
         telemetry.addData("Turntable Auto-gimballing Disabled", turntableLocked)
 
         if (turntableLocked || power != 0.0) {
-            turntable.overridePower = power
+            if (turntable != null) turntable.overridePower = power
+            if (turntableAxon != null) {
+                turntableAxon.position += when {
+                    power > 0.0 -> {
+                        0.01
+                    }
+                    power < 0.0 -> {
+                        -0.01
+                    }
+                    else -> {
+                        // == 0.0
+                        0.00
+                    }
+                }
+            }
         } else {
-            turntable.overridePower = null // let the control loop below handle it
+            if (turntable != null) turntable.overridePower = null // let the control loop below handle it
 
             val delta = calculateTagDelta()
 
             // rotate
-            rotateTurretByDelta(delta)
+            if (turntable != null) rotateTurretByDelta(delta)
+            if (turntableAxon != null) rotateTurret(delta)
         }
         // endregion
     }
 
     override fun stop() {
-        turntable.cleanUp()
+        turntable?.cleanUp()
         spindexer.cleanUp()
     }
 
@@ -483,6 +513,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
      * @param delta The delta, in degrees, from current forward on the robot. Negative is left; Positive is right.
      */
     fun rotateTurretByDelta(delta: Double?) {
+        if (turntable == null) return
         if (delta == null) {
             turntable.targetPosition = null
             return
@@ -495,6 +526,36 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 //        target = clamp(target, -135.0, 135.0)
 
         turntable.targetPosition = target
+    }
+
+    fun rotateTurret(delta: Double?) {
+        if (turntableAxon == null) return
+        telemetry.addData("Turntable Axon Position", turntableAxon.position)
+        telemetry.addData("Turntable Axon Delta", if (delta != null) (delta / 70) else delta)
+        turntableAxon.position += (
+            // 90 degrees is 0.5 on turret
+            if (delta != null) ((delta / 70) * 0.067) else calculateUnknownTurretRotation()
+                // 0.1 good but too jittery at high range
+                // 0.02 good but too low
+        )
+    }
+
+    private var goingNegative = true
+    fun calculateUnknownTurretRotation(): Double {
+        if (turntableAxon == null) return 0.0
+        // Don't know where it is, need to find
+        if (turntableAxon.position >= 1.0) {
+            goingNegative = true
+        } else if (turntableAxon.position <= 0.0) {
+            goingNegative = false
+        }
+
+        // Always move in the correct direction to go find it
+        return if (goingNegative) {
+            -0.01
+        } else {
+            0.01
+        }
     }
     // endregion
 
@@ -535,13 +596,14 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         val delta = if (limelight == null) { // find delta
             null // Not attached; do nothing
         } else if (depotTag != null) {
-            -depotTag.position.x * 90 // negative! because positive is left by default
+            -depotTag.position.x * 20 // negative! because positive is left by default
         } else if (motifTag != null) {
             // rotate to find the tag
-            if (teamColor == TeamColor.BLUE) 20.0 else -20.0
-        } else 0.0
+            null
+        } else null
 
         telemetry.addData("Delta", delta)
+        telemetry.addData("Depot Tag Data", depotTag?.position)
         return delta
     }
     // endregion
@@ -572,7 +634,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
             override fun run(p: TelemetryPacket): Boolean {
                 flywheel.setVelocity(currentLaunchDistance.velocity)
-                turntable.update()
+                turntable?.update()
                 spindexer.update()
 
                 val t = if (beginTs < 0) {
@@ -594,7 +656,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
             override fun run(p: TelemetryPacket): Boolean {
                 spindexer.overridePower = override
                 spindexer.update() // for encoder
-                turntable.update()
+                turntable?.update()
                 flywheel.setVelocity(flywheel.velocity)
 
                 val t = if (beginTs < 0) {
@@ -621,8 +683,6 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 p.put("Spun Up?", spunUp)
 
                 flywheel.setVelocity(distance.velocity)
-                turntable.update()
-                spindexer.update()
                 boosterOn()
 
                 val averageVelocity = flywheel.velocity
@@ -670,8 +730,6 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 val averageVelocity = flywheel.velocity
 
                 flywheel.setVelocity(currentLaunchDistance.velocity)
-                turntable.update()
-                spindexer.update()
 
                 // Monitor for big loss in velocity
                 if ((lastVelocity - averageVelocity) > 50.0 || timer.seconds() > timeout) {
@@ -876,6 +934,33 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 }
                 return spindexer.error > TOLERANCE_DEGREES // run until in tolerance range
             }
+        }
+    }
+
+    // todo: fix the run blockings in this class to use this
+    fun runBlockingAndUpdate(a: Action) {
+        val dash = FtcDashboard.getInstance()
+        val c = Canvas()
+        a.preview(c)
+
+        var b = true
+        while (b && !Thread.currentThread().isInterrupted) {
+            val p = TelemetryPacket()
+            p.fieldOverlay().operations.addAll(c.operations)
+
+            spindexer.update()
+            flywheel.setVelocity(flywheel.velocity)
+
+            turntable?.update()
+
+            if (turntableAxon != null) {
+                val delta = calculateTagDelta()
+                rotateTurret(delta)
+            }
+
+            b = a.run(p)
+
+            dash.sendTelemetryPacket(p)
         }
     }
     // endregion

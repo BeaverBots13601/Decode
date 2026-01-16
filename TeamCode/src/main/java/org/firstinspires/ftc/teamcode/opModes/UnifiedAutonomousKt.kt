@@ -5,9 +5,7 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry
 import com.acmerobotics.roadrunner.ParallelAction
 import com.acmerobotics.roadrunner.Pose2d
 import com.acmerobotics.roadrunner.SequentialAction
-import com.acmerobotics.roadrunner.SleepAction
 import com.acmerobotics.roadrunner.Vector2d
-import com.acmerobotics.roadrunner.ftc.runBlocking
 import com.qualcomm.hardware.limelightvision.Limelight3A
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous
 import com.qualcomm.robotcore.eventloop.opmode.Disabled
@@ -238,19 +236,6 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         telemetry.addData("INIT STATUS", "READY")
         telemetry.update()
 
-        val thread = Thread {
-            while (!Thread.currentThread().isInterrupted) {
-                out.flywheel.setVelocity(launchDistance.velocity)
-//                if (currentLocation == Locations.RedFar || currentLocation == Locations.BlueFar) {
-//                    out.turntableAxon.targetPosition = 0.0
-//                } else {
-//                    out.rotateTurretByDelta(out.calculateTagDelta())
-//                }
-                telemetry.addData("Flywheel Velocity", out.flywheel.velocity)
-                telemetry.update()
-            }
-        }
-
         waitForStart() // setup done actually do things
 
         out.start()
@@ -271,27 +256,19 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         telemetry.update()
         motif = motif ?: Motif.GREEN_PURPLE_PURPLE // default
 
-        //thread.start()
-
-//        if (currentLocation == Locations.RedFar || currentLocation == Locations.BlueFar) {
-//            runBlocking(SleepAction(3.0))
-//        } else {
-//            runBlocking(SleepAction(1.5))
-//        }
-        runBlocking(toLaunchAction)
+        out.runBlockingAndUpdate(toLaunchAction)
         out.intakeOn()
-        runBlocking(out.launchAllHeld(launchDistance))
-        runBlocking(firstGroup)
-        runBlocking(out.launchAllHeld(launchDistance))
-        runBlocking(secondGroup)
-        runBlocking(out.launchAllHeld(launchDistance))
-        runBlocking(thirdGroup)
-        runBlocking(out.launchAllHeld(launchDistance))
-        runBlocking(toPark)
+        out.runBlockingAndUpdate(out.launchAllHeld(launchDistance))
+        out.runBlockingAndUpdate(firstGroup)
+        out.runBlockingAndUpdate(out.launchAllHeld(launchDistance))
+        out.runBlockingAndUpdate(secondGroup)
+        out.runBlockingAndUpdate(out.launchAllHeld(launchDistance))
+        out.runBlockingAndUpdate(thirdGroup)
+        out.runBlockingAndUpdate(out.launchAllHeld(launchDistance))
+        out.runBlockingAndUpdate(toPark)
 
         out.stop()
         limelight?.stop()
-        thread.interrupt()
 
         blackboard["robotHeading"] = roadrunnerDrive.localizer.pose.heading.toDouble()
     }

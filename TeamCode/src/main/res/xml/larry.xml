@@ -5,10 +5,13 @@
             <!-- Drivetrain -->
             <goBILDA5202SeriesMotor name="rightBack" port="0" />
 
-            <!-- Outtake (motors uncertain) -->
+            <!-- Outtake -->
             <Matrix12vMotor name="counterspin" port="2" />
             <Matrix12vMotor name="flywheel" port="3" />
             <goBILDA5202SeriesMotor name="boosterMotor" port="1" />
+
+            <!-- Spindexer -->
+            <ContinuousRotationServo name="spindexerAxon" port="2" />
 
             <!-- Intake -->
             <Servo name="leftIntakePropBar" port="4" />
@@ -36,7 +39,7 @@
             <Servo name="rightIntakePropBar" port="5" />
 
             <!-- Outtake -->
-            <ContinuousRotationServo name="turntableAxon" port="3" />
+            <Servo name="turntableAxon" port="3" />
 
             <!-- I2C -->
             <RevColorSensorV3 name="leftIntakeColorSensor" port="0" bus="0" />
@@ -51,9 +54,6 @@
 
             <!-- Brakes -->
             <Servo name="rightBrake" port="2" />
-
-            <!-- Spindexer -->
-            <ContinuousRotationServo name="spindexerAxon" port="1" />
 
             <!-- LED -->
             <Servo name="rightIndicatorLED" port="4" />
