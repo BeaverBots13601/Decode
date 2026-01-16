@@ -6,8 +6,8 @@
             <goBILDA5202SeriesMotor name="rightBack" port="0" />
 
             <!-- Outtake -->
-            <Matrix12vMotor name="counterspin" port="2" />
-            <Matrix12vMotor name="flywheel" port="3" />
+            <Matrix12vMotor name="counterspin" port="3" />
+            <Matrix12vMotor name="flywheel" port="2" />
             <goBILDA5202SeriesMotor name="boosterMotor" port="1" />
 
             <!-- Spindexer -->

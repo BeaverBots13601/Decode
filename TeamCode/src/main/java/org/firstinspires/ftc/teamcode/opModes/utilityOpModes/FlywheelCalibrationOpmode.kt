@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.opModes.utilityOpModes
 import com.acmerobotics.dashboard.FtcDashboard
 import com.acmerobotics.dashboard.config.Config
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry
-import com.acmerobotics.roadrunner.now
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
 import com.qualcomm.robotcore.hardware.DcMotor
@@ -42,12 +41,12 @@ class FlywheelCalibrationOpmode : LinearOpMode() {
             0.00005,
             telemetry,
         ).apply {
-            overridePower = -0.15
+            overridePower = -0.2
         }
         val booster = createDefaultMotor(hardwareMap, "boosterMotor")
 
         waitForStart()
-        intakeMotor.power = 1.0
+        intakeMotor.power = 0.8
         booster.power = 1.0
         while (!isStopRequested) {
             if (POWER != 0.0) {

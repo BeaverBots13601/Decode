@@ -8,6 +8,7 @@ import com.acmerobotics.roadrunner.Action
 import com.acmerobotics.roadrunner.InstantAction
 import com.acmerobotics.roadrunner.ParallelAction
 import com.acmerobotics.roadrunner.SequentialAction
+import com.acmerobotics.roadrunner.SleepAction
 import com.acmerobotics.roadrunner.clamp
 import com.acmerobotics.roadrunner.ftc.runBlocking
 import com.acmerobotics.roadrunner.now
@@ -156,7 +157,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 flywheel.setVelocity(1000000.0)
                 boosterOn()
             } else if (data.currentGamepadTwo.dpadLeftWasPressed() || data.currentGamepadTwo.dpadRightWasPressed()) {
-                runBlocking(launch())
+                runBlockingAndUpdateTeleOp(launch())
             } else {
                 flywheel.setVelocity(null)
                 boosterOff()
@@ -300,7 +301,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 // stop motors
                 DriveTrainKt.getInstance()
                     ?.setDriveMotors(arrayOf(0.0, 0.0, 0.0, 0.0), RunMode.RUN_USING_ENCODER)
-                runBlocking(launch())
+                runBlockingAndUpdateTeleOp(launch())
                 if (artifacts.artifactsHeld != 0) {
                     rotateSpindexer(artifacts.rotate())
                 } else {
@@ -600,7 +601,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         } else if (motifTag != null) {
             // rotate to find the tag
             null
-        } else null
+        } else 0.0 // todo make this null for downstream autotracking (except in auto)
 
         telemetry.addData("Delta", delta)
         telemetry.addData("Depot Tag Data", depotTag?.position)
@@ -608,7 +609,9 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     }
     // endregion
 
-    fun loadAutoArtifacts() = artifacts.autoArtifactPreloads()
+    fun loadAutoArtifacts() {
+        artifacts.autoArtifactPreloads()
+    }
 
     // region Roadrunner Actions
     /**
@@ -624,7 +627,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
             InstantAction { boosterOff() },
             InstantAction { artifacts.launched() },
             InstantAction { setLEDs() },
-            InstantAction { intakeOff() },
+            //InstantAction { intakeOff() },
         )
     }
 
@@ -657,7 +660,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 spindexer.overridePower = override
                 spindexer.update() // for encoder
                 turntable?.update()
-                flywheel.setVelocity(flywheel.velocity)
+                flywheel.loop()
 
                 val t = if (beginTs < 0) {
                     beginTs = now()
@@ -806,6 +809,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     fun launchAllHeld(distance: LaunchDistance): Action {
         val numArtifacts = artifacts.artifactsHeld
+        flywheel.setVelocity(distance.velocity)
 
         if (numArtifacts == 0) return InstantAction {}
 
@@ -823,13 +827,11 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 },
                 sleepAndUpdate(1.0),
                 InstantAction {
-                    intakeOff()
+                    //intakeOff()
                     boosterOff()
+                    flywheel.setVelocity(null)
                     artifacts.allLaunched()
                 },
-            ),
-            SequentialAction(
-                spinUpUntilLaunched(distance, 4.0),
             )
         )
 
@@ -839,8 +841,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction {
                     intakeOn()
                     boosterOn()
-                    leftIntakePropBar.position =  .72
-                    rightIntakePropBar.position = .53
+                    leftIntakePropBar.position =  .75
+                    rightIntakePropBar.position = .50
                 },
                 sleepAndOverrideSpindexer(2.0, -1.0),
                 InstantAction {
@@ -850,16 +852,13 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 },
                 sleepAndUpdate(1.0),
                 InstantAction {
-                    intakeOff()
+                    //intakeOff()
                     boosterOff()
                     leftIntakePropBar.position = .82
                     rightIntakePropBar.position = .43
+                    flywheel.setVelocity(null)
                     artifacts.allLaunched()
                 },
-            ),
-            SequentialAction(
-                spinUpUntilLaunched(distance, 2.5),
-                spinUpUntilLaunched(distance, 2.5),
             )
         )
 
@@ -868,9 +867,12 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction {
                     intakeOn()
                     boosterOn()
-                    leftIntakePropBar.position =  .72
-                    rightIntakePropBar.position = .53
+                    leftIntakePropBar.position =  .75
+                    rightIntakePropBar.position = .50
                 },
+                if (distance == LaunchDistance.FAR) {
+                    SleepAction(1.0)
+                } else InstantAction {},
                 sleepAndOverrideSpindexer(3.0, -1.0),
                 InstantAction {
                     spindexer.update()
@@ -879,17 +881,13 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 },
                 sleepAndUpdate(1.0),
                 InstantAction {
-                    intakeOff()
+                    //intakeOff()
                     boosterOff()
                     leftIntakePropBar.position = .82
                     rightIntakePropBar.position = .43
+                    flywheel.setVelocity(null)
                     artifacts.allLaunched()
                 },
-            ),
-            SequentialAction(
-                spinUpUntilLaunched(distance, 2.5),
-                spinUpUntilLaunched(distance, 2.5),
-                spinUpUntilLaunched(distance, 2.5),
             )
         )
 
@@ -904,7 +902,6 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
             private val timer = ElapsedTime()
             override fun run(p: TelemetryPacket): Boolean {
                 if (firstRun) {
-                    intakeActive = false
                     intakeOn()
                     timer.reset()
                     firstRun = false
@@ -912,11 +909,13 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
                 val detectedArtifact = detectArtifact(leftIntakeColorSensor.normalizedColors, rightIntakeColorSensor.normalizedColors)
 
-                if ((artifacts.intakeArtifact == ArtifactColors.NONE && detectedArtifact != ArtifactColors.NONE)
-                    || timer.seconds() > 1.5) {
+                if (artifacts.intakeArtifact == ArtifactColors.NONE && detectedArtifact != ArtifactColors.NONE) {
                     artifacts.intake(detectedArtifact)
-                    runBlocking(spin())
-                    intakeOff()
+                    runBlockingAndUpdate(spin())
+                    //intakeOff()
+                    return false
+                } else if (timer.seconds() > 2.5) {
+                    //intakeOff()
                     return false
                 }
                 return true
@@ -949,7 +948,28 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
             p.fieldOverlay().operations.addAll(c.operations)
 
             spindexer.update()
-            flywheel.setVelocity(flywheel.velocity)
+            flywheel.loop()
+
+            turntable?.update()
+
+            b = a.run(p)
+
+            dash.sendTelemetryPacket(p)
+        }
+    }
+
+    fun runBlockingAndUpdateTeleOp(a: Action) {
+        val dash = FtcDashboard.getInstance()
+        val c = Canvas()
+        a.preview(c)
+
+        var b = true
+        while (b && !Thread.currentThread().isInterrupted) {
+            val p = TelemetryPacket()
+            p.fieldOverlay().operations.addAll(c.operations)
+
+            spindexer.update()
+            flywheel.loop()
 
             turntable?.update()
 
@@ -967,7 +987,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     // region Enums
     enum class LaunchDistance(val velocity: Double) {
-        FAR(1200.0),
+        FAR(1065.0),
         CLOSE_PEAK(900.0),
         CLOSE_FAR(950.0),
         CLOSE_MID(850.0),

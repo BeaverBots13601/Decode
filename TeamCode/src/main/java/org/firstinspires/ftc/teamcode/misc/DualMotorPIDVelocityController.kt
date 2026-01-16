@@ -30,7 +30,7 @@ class DualMotorPIDVelocityController(
     /**
      * Update the motor
      */
-    private fun loop(targetVelocity: Double?) {
+    fun loop(targetVelocity: Double? = pastTargetVelocity) {
         if (targetVelocity != pastTargetVelocity) {
             timer.reset()
             pastTargetVelocity = targetVelocity
