@@ -376,8 +376,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
 
         telemetry.addData("Turntable Axon Position", turntableAxon?.position)
+        // endregion
     }
-    // endregion
 
     override fun stop() {
         turntable?.cleanUp()
