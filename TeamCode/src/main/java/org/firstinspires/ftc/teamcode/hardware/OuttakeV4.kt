@@ -82,20 +82,21 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         }
     }.getOrNull()
 
-    private val turntable = runCatching {
-        if (turntableAxon != null) throw Error()
-        AxonDriver(
-            hardwareMap,
-            "turntableAxon",
-            "turntableEncoder",
-            0.0,//0.008,
-            0.0,//0.096,
-            0.0,//0.00044, // todo: tune
-            // 0.04 = ku, 1/6 = tu   ??????
-            telemetry,
-            -2.0,
-        )
-    }.getOrNull()
+    private val turntable: AxonDriver? = null
+//    runCatching {
+//        if (turntableAxon != null) throw Error()
+//        AxonDriver(
+//            hardwareMap,
+//            "turntableAxon",
+//            "turntableEncoder",
+//            0.0,//0.008,
+//            0.0,//0.096,
+//            0.0,//0.00044, // todo: tune
+//            // 0.04 = ku, 1/6 = tu   ??????
+//            telemetry,
+//            -2.0,
+//        )
+//    }
 
     // Spindexer
     private val spindexer = AxonDriver(
@@ -162,8 +163,6 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 flywheel.setVelocity(null)
                 boosterOff()
             }
-
-            spindexer.reset()
 
             spindexer.overridePower = if (data.currentGamepadTwo.right_bumper) {
                 0.2
@@ -369,14 +368,16 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         } else {
             if (turntable != null) turntable.overridePower = null // let the control loop below handle it
 
-            val delta = calculateTagDelta()
+            val delta = calculateTagDelta(true)
 
             // rotate
             if (turntable != null) rotateTurretByDelta(delta)
             if (turntableAxon != null) rotateTurret(delta)
         }
-        // endregion
+
+        telemetry.addData("Turntable Axon Position", turntableAxon?.position)
     }
+    // endregion
 
     override fun stop() {
         turntable?.cleanUp()
@@ -531,14 +532,18 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
     fun rotateTurret(delta: Double?) {
         if (turntableAxon == null) return
-        telemetry.addData("Turntable Axon Position", turntableAxon.position)
         telemetry.addData("Turntable Axon Delta", if (delta != null) (delta / 70) else delta)
-        turntableAxon.position += (
+        val final = turntableAxon.position + (
             // 90 degrees is 0.5 on turret
-            if (delta != null) ((delta / 70) * 0.067) else calculateUnknownTurretRotation()
+            if (delta != null) {
                 // 0.1 good but too jittery at high range
                 // 0.02 good but too low
+                ((delta / 70) * 0.067)
+            } else {
+                calculateUnknownTurretRotation()
+            }
         )
+        turntableAxon.position = clamp(final, 0.0, 1.0)
     }
 
     private var goingNegative = true
@@ -589,7 +594,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         return tag
     }
 
-    fun calculateTagDelta(): Double? {
+    fun calculateTagDelta(teleOp: Boolean = false): Double? {
         // get tags
         val depotTag = getDepotTag()
         val motifTag = getMotifTag() // if can see, must rotate
@@ -601,7 +606,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         } else if (motifTag != null) {
             // rotate to find the tag
             null
-        } else 0.0 // todo make this null for downstream autotracking (except in auto)
+        } else (if (teleOp) null else 0.0)
 
         telemetry.addData("Delta", delta)
         telemetry.addData("Depot Tag Data", depotTag?.position)
@@ -974,7 +979,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
             turntable?.update()
 
             if (turntableAxon != null) {
-                val delta = calculateTagDelta()
+                val delta = calculateTagDelta(true)
                 rotateTurret(delta)
             }
 
