@@ -7,7 +7,6 @@ import com.pedropathing.ftc.drivetrains.MecanumConstants;
 import com.pedropathing.ftc.localization.constants.PinpointConstants;
 import com.pedropathing.paths.PathConstraints;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -15,7 +14,7 @@ import org.firstinspires.ftc.teamcode.misc.DriveMotors;
 
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .mass(5); // todo: add mass in kg
+            .mass(11.52125); // 25.4lb in kg
 
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 

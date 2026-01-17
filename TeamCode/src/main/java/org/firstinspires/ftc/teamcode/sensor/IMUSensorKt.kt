@@ -13,7 +13,7 @@ class IMUSensorKt private constructor(hardwareMap: HardwareMap, initData: Sensor
     private val imu = hardwareMap.get(IMU::class.java, "imu")
 
     init {
-        val imuParameters = BNO055IMUNew.Parameters(RevHubOrientationOnRobot(
+        val imuParameters = IMU.Parameters(RevHubOrientationOnRobot(
             RevHubOrientationOnRobot.LogoFacingDirection.UP,
             RevHubOrientationOnRobot.UsbFacingDirection.RIGHT
         ))

@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.sensor
 
 import com.qualcomm.robotcore.hardware.HardwareMap
+import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
 import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
 import org.firstinspires.ftc.robotcore.external.Telemetry
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName
@@ -52,7 +53,12 @@ abstract class SensorDeviceKt<T> {
     data class SensorInitData(
         val teamColor: TeamColor,
         val dashboardEnabled: Boolean,
-    )
+    ) {
+        constructor(initData: HardwareMechanismKt.InitData) : this(
+            initData.teamColor,
+            initData.dashboardEnabled,
+        )
+    }
 
     protected fun setUpCamera(hardwareMap: HardwareMap, cameraName: String, cameraWidth: Int, cameraHeight: Int, orientation: OpenCvCameraRotation): OpenCvCamera {
         val webcamName = hardwareMap.get(WebcamName::class.java, cameraName)

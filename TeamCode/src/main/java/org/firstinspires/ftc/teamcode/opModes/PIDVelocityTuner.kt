@@ -14,14 +14,14 @@ class PIDVelocityTuner : LinearOpMode() {
     override fun runOpMode() {
         val telemetry = MultipleTelemetry(telemetry, FtcDashboard.getInstance().telemetry)
         val a = PIDVelocityController(
-            hardwareMap.get(DcMotorEx::class.java, "leftMotor"),
+            hardwareMap.get(DcMotorEx::class.java, "flywheel"),
             0.0175,
             0.000002,
             0.00001,
             telemetry,
         )
-        val b = hardwareMap.get(DcMotorEx::class.java, "rightMotor")
-        b.mode = DcMotor.RunMode.RUN_USING_ENCODER
+        //val b = hardwareMap.get(DcMotorEx::class.java, "rightFlywheel")
+        //b.mode = DcMotor.RunMode.RUN_USING_ENCODER
 
         waitForStart()
 
@@ -29,22 +29,22 @@ class PIDVelocityTuner : LinearOpMode() {
         var d: Double
         while (opModeIsActive()) {
             if (c) {
-                a.velocity = 1000.0
-                b.velocity = 1000.0
+                a.setVelocity(1000.0)
+                //b.velocity = 1000.0
                 d = 1000.0
 
                 if (gamepad2.circleWasPressed()) c = false
             } else {
-                a.velocity = -1000.0
-                b.velocity = -1000.0
+                a.setVelocity(-1000.0)
+                //b.velocity = -1000.0
                 d = -1000.0
 
                 if (gamepad2.circleWasPressed()) c = true
             }
 
-            telemetry.addData("Velocity", ((a.velocity + b.velocity) / 2))
+            telemetry.addData("Velocity", ((a.velocity/* + b.velocity) / 2*/)))
             telemetry.addData("Target", d)
-            telemetry.addData("Error", d - ((a.velocity + b.velocity) / 2))
+            telemetry.addData("Error", d - ((a.velocity/* + b.velocity) / 2*/)))
             telemetry.update()
         }
     }

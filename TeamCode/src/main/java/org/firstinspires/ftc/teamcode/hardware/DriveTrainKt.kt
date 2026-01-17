@@ -1,16 +1,22 @@
 package org.firstinspires.ftc.teamcode.hardware
 
+import com.acmerobotics.dashboard.FtcDashboard
 import com.acmerobotics.dashboard.config.Config
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket
+import com.acmerobotics.roadrunner.Pose2d
 import com.qualcomm.robotcore.hardware.DcMotor.RunMode
 import com.qualcomm.robotcore.hardware.DcMotorEx
-import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.DigitalChannel
 import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.robotcontroller.teamcode.GamepadButtons
 import org.firstinspires.ftc.robotcontroller.teamcode.HardwareMechanismKt
+import org.firstinspires.ftc.robotcontroller.teamcode.TeamColor
 import org.firstinspires.ftc.robotcore.external.Telemetry
 import org.firstinspires.ftc.teamcode.misc.DriveMotors
 import org.firstinspires.ftc.teamcode.misc.PoseKt
+import org.firstinspires.ftc.teamcode.roadrunner.MecanumDrive
+import org.firstinspires.ftc.teamcode.sensor.LimelightKt
+import org.firstinspires.ftc.teamcode.sensor.SensorDeviceKt
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -28,10 +34,61 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
     private val dashboardEnabled = data.dashboardEnabled
     private var currentSpeedMode = SPEEDS.NORMAL
     private var orientationMode = data.driveMode
+    private val teamColor = data.teamColor
+
+    // Roadrunner drive for autonomous movement in teleop. 0,0,0 pose is okay because really we want
+    // to be in a specific spot relative to an apriltag, not on the field
+    private val roadrunnerDrive = MecanumDrive(hardwareMap, Pose2d(0.0, 0.0, 0.0))
+    private val limelight = LimelightKt.getInstance(hardwareMap, SensorDeviceKt.SensorInitData(
+        teamColor = data.teamColor,
+        dashboardEnabled = data.dashboardEnabled,
+        ), telemetry)
 
     override fun start() {}
 
+    private var autoTrackEnabled = false
     override fun run(data: RunData) {
+        if (false && data.currentGamepadOne.psWasPressed()) {
+            autoTrackEnabled = !autoTrackEnabled
+        }
+
+        if (autoTrackEnabled && limelight != null) { // handle moving autonomously to apriltag
+            val tags = limelight.poll()
+
+            val relativePose = (tags?.find { // Pose of the tag relative to camera
+                if (teamColor == TeamColor.RED) { // select tag on depot
+                    it.fiducialId == 24
+                } else {
+                    it.fiducialId == 20
+                }
+            }?.targetPoseCameraSpace) ?: return // return if not valid or found
+            //val currentPose = roadrunnerDrive.localizer.pose
+            val currentPose = Pose2d(0.0, 0.0, 0.0)
+
+            // 1m = 39.37 inches
+            // -z on the ll is +x in roadrunner
+            // +x on the ll is +y in roadrunner
+            // +deg cw on the ll is -deg in roadrunner
+            val calculatedPose = Pose2d((-39.37 * relativePose.position.z) + currentPose.position.x + 52.5,
+                (39.37 * relativePose.position.x) + currentPose.position.y,
+                -Math.toRadians(relativePose.orientation.yaw) + currentPose.heading.real)
+
+            telemetry.addData("Current Pose", calculatedPose)
+
+            val finalAction = roadrunnerDrive.actionBuilder(currentPose)
+//            val finalAction = roadrunnerDrive.actionBuilder(roadrunnerDrive.localizer.pose)
+                .strafeToLinearHeading(calculatedPose.position, calculatedPose.heading)
+                .build()
+
+            // todo should we reuse these actions for a few cycles to save on cycle times?
+            val packet = TelemetryPacket()
+            finalAction.run(packet)
+            FtcDashboard.getInstance().sendTelemetryPacket(packet)
+
+            return
+        }
+
+
         val switchState = getSwitchState()
         if (switchState != null && switchState) { // if no switch is attached, do nothing
             orientationMode = DriveMode.ROBOT
@@ -104,6 +161,7 @@ class DriveTrainKt private constructor(hardwareMap: HardwareMap, data: InitData,
         GamepadButtons.GP1_DPAD_UP,
         GamepadButtons.GP1_DPAD_LEFT,
         GamepadButtons.GP1_DPAD_DOWN,
+        GamepadButtons.GP1_PS,
     )
 
     private enum class SPEEDS(val speed: Double) {

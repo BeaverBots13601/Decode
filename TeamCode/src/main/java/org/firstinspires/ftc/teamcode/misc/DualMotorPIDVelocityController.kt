@@ -8,8 +8,9 @@ import com.qualcomm.robotcore.util.ElapsedTime
 import org.firstinspires.ftc.robotcore.external.Telemetry
 
 @Config
-class PIDVelocityController(
-    private val motor: DcMotorEx,
+class DualMotorPIDVelocityController(
+    private val motor1: DcMotorEx,
+    private val motor2: DcMotorEx,
     private val kP: Double,
     private val kI: Double,
     private val kD: Double,
@@ -19,16 +20,17 @@ class PIDVelocityController(
     private var lastError = 0.0
     private var pastTargetVelocity: Double? = -1.0
     private val timer = ElapsedTime()
-    private val name = motor.deviceName
+    private val name = motor1.deviceName
 
     init {
-        motor.mode = RunMode.RUN_WITHOUT_ENCODER
+        motor1.mode = RunMode.RUN_WITHOUT_ENCODER
+        motor2.mode = RunMode.RUN_WITHOUT_ENCODER
     }
 
     /**
      * Update the motor
      */
-    private fun loop(targetVelocity: Double?) {
+    fun loop(targetVelocity: Double? = pastTargetVelocity) {
         if (targetVelocity != pastTargetVelocity) {
             timer.reset()
             pastTargetVelocity = targetVelocity
@@ -37,11 +39,12 @@ class PIDVelocityController(
         }
 
         if (targetVelocity == null) {
-            motor.power = 0.0
+            motor1.power = 0.0
+            motor2.power = 0.0
             return
         }
 
-        val velocity = motor.velocity
+        val velocity = (motor1.velocity + motor2.velocity) / 2
         val error = targetVelocity - velocity
 
         integralSum += (error * timer.seconds()) // sum of all error over time
@@ -56,7 +59,8 @@ class PIDVelocityController(
 
         out = clamp(out, -1.0, 1.0)
 
-        motor.power = out
+        motor1.power = out
+        motor2.power = out
 
         lastError = error
 
@@ -73,7 +77,7 @@ class PIDVelocityController(
      * The control loop is ran when you set the velocity, so you should set it every loop.
      */
     val velocity: Double
-        get() = motor.velocity
+        get() = motor1.velocity
 
     fun setVelocity(velocity: Double?) {
         loop(velocity)
