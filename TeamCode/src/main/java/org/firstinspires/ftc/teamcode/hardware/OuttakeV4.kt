@@ -76,7 +76,7 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     // Turntable
     private val turntableAxon = runCatching {
         hardwareMap.servo.get("turntableAxon").apply {
-            scaleRange(0.05, 0.93)
+            scaleRange(0.02, 0.93)
             position = 0.5 // Start centered
 //            direction = Servo.Direction.REVERSE
         }
@@ -875,9 +875,9 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                     leftIntakePropBar.position =  .75
                     rightIntakePropBar.position = .50
                 },
-                if (distance == LaunchDistance.FAR) {
-                    SleepAction(1.0)
-                } else InstantAction {},
+//                if (distance == LaunchDistance.FAR) {
+                    //SleepAction(1.0)
+//                } else InstantAction {},
                 sleepAndOverrideSpindexer(3.0, -1.0),
                 InstantAction {
                     spindexer.update()
@@ -987,6 +987,13 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
 
             dash.sendTelemetryPacket(p)
         }
+    }
+
+    fun endAutoAction(): Action {
+        return SequentialAction(
+            InstantAction { intakeReverse() },
+            SleepAction(0.5),
+        )
     }
     // endregion
 

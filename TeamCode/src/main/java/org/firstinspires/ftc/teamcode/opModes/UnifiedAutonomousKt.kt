@@ -59,7 +59,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
             Locations.BlueFar -> { // canonical far
                 RouteParameters(
                     //Pose2d(-12.0, -12.0, (-25 * PI) / 32),
-                    Pose2d(50.0, -12.0, (-28 * PI) / 32),
+                    Pose2d(50.0, -12.0, (-29 * PI) / 32),
                     OuttakeV4.LaunchDistance.FAR,
                     ArtifactPositions.BLUE_FAR,
                     ArtifactPositions.BLUE_MID,
@@ -94,9 +94,9 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 
             Locations.RedClose -> { // blue close but rotated
                 RouteParameters(
-                    Pose2d(-24.0, 24.0, 3 * PI / 4),
+                    Pose2d(-24.0, 24.0, 25 * PI / 32),
 //                    Pose2d(-24.0, 24.0, 21 * PI / 32),
-                    OuttakeV4.LaunchDistance.CLOSE_MID,
+                    OuttakeV4.LaunchDistance.CLOSE_PEAK,
                     ArtifactPositions.RED_CLOSE,
                     ArtifactPositions.RED_MID,
                     ArtifactPositions.RED_FAR,
@@ -129,9 +129,9 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         val seventhArtifactPickupHeading = routeParameters.thirdArtifactRow.pose.heading
 
         val firstArtifactBefore = toLaunch.fresh()
-            .strafeToLinearHeading(firstArtifactPose - (firstOffsetPose * 1.0), firstArtifactPickupHeading)
+            .strafeToLinearHeading(firstArtifactPose - (firstOffsetPose * 0.0), firstArtifactPickupHeading)
         val firstArtifact = firstArtifactBefore.fresh()
-            .strafeToLinearHeading(firstArtifactPose + (firstOffsetPose * 2.0), firstArtifactPickupHeading)
+            .strafeToLinearHeading(firstArtifactPose + (firstOffsetPose * 1.0), firstArtifactPickupHeading)
         val secondArtifact = firstArtifact.fresh() // 2.4 far?
             .strafeToLinearHeading(firstArtifactPose + (firstOffsetPose * 3.0), firstArtifactPickupHeading)
         val thirdArtifact = secondArtifact.fresh() // 2.6 far?
@@ -195,17 +195,17 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                 fourArtifact.build(),
                 out.intakeUntilIndexedOrTimeout()
             ),
-            SleepAction(0.5),
-            ParallelAction(
-                fiveArtifact.build(),
-                out.intakeUntilIndexedOrTimeout()
-            ),
-            SleepAction(0.5),
-            SequentialAction(
-                sixArtifact.build(),
-                out.intakeUntilIndexedOrTimeout(),
-            ),
-            //toLaunchThree.build(),
+//            SleepAction(0.5),
+//            ParallelAction(
+//                fiveArtifact.build(),
+//                out.intakeUntilIndexedOrTimeout()
+//            ),
+//            SleepAction(0.5),
+//            SequentialAction(
+//                sixArtifact.build(),
+//                out.intakeUntilIndexedOrTimeout(),
+//            ),
+//            toLaunchThree.build(),
         )
 
         val thirdGroup = SequentialAction(
@@ -257,6 +257,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         out.runBlockingAndUpdate(firstGroup)
         out.runBlockingAndUpdate(out.launchAllHeld(launchDistance))
         out.runBlockingAndUpdate(secondGroup)
+        out.runBlockingAndUpdate(out.endAutoAction())
 
         if (false) {
             out.runBlockingAndUpdate(out.launchAllHeld(launchDistance))
@@ -297,13 +298,13 @@ open class UnifiedAutonomousKt : LinearOpMode() {
 //        BLUE_CLOSE(-1.0, Pose2d(-12.0, -34.0, -PI / 2)),
 //        BLUE_MID(-1.0, Pose2d(12.0, -34.0, -PI / 2)),
 //        BLUE_FAR(-1.0, Pose2d(36.0, -34.0, -PI / 2)),
-        RED_CLOSE(1.0, Pose2d(-18.0, 34.0, PI / 2)),
+        RED_CLOSE(1.0, Pose2d(-18.0, 32.0, PI / 2)),
         RED_MID(1.0, Pose2d(5.0, 34.0, PI / 2)),
         RED_FAR(1.0, Pose2d(27.0, 34.0, PI / 2)),
         RED_HUMAN_PLAYER(1.0, Pose2d(60.0, 64.0, PI / 2)),
         BLUE_CLOSE(-1.0, Pose2d(-14.0, -30.0, -7 * PI / 16)),
         BLUE_MID(-1.0, Pose2d(8.0, -34.0, -PI / 2)),
-        BLUE_FAR(-1.0, Pose2d(30.0, -34.0, -PI / 2)),
+        BLUE_FAR(-1.0, Pose2d(30.0, -30.0, -PI / 2)),
         BLUE_HUMAN_PLAYER(1.0, Pose2d(60.0, -64.0, -PI / 2)),
     }
 
