@@ -61,7 +61,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                     //Pose2d(-12.0, -12.0, (-25 * PI) / 32),
                     Pose2d(50.0, -12.0, (-29 * PI) / 32),
                     OuttakeV4.LaunchDistance.FAR,
-                    ArtifactPositions.BLUE_FAR,
+                    ArtifactPositions.BLUE_HUMAN_PLAYER,
                     ArtifactPositions.BLUE_MID,
                     ArtifactPositions.BLUE_CLOSE,
                     Pose2d(63.0, -36.0, -PI)
@@ -73,7 +73,7 @@ open class UnifiedAutonomousKt : LinearOpMode() {
                     //Pose2d(-12.0, 12.0, (3 * PI) / 4),
                     Pose2d(50.0, 12.0, (28 * PI) / 32),
                     OuttakeV4.LaunchDistance.FAR,
-                    ArtifactPositions.RED_FAR,
+                    ArtifactPositions.RED_HUMAN_PLAYER,
                     ArtifactPositions.RED_MID,
                     ArtifactPositions.RED_CLOSE,
                     Pose2d(63.0, 36.0, -PI)
@@ -236,30 +236,30 @@ open class UnifiedAutonomousKt : LinearOpMode() {
         out.start()
         limelight?.start()
 
-        var motif: Motif? = null
-        val timer = ElapsedTime()
+//        var motif: Motif? = null
+//        val timer = ElapsedTime()
 
-        while (motif == null && timer.seconds() < 2.0) { // find tag or abort if too long
-            motif = when (limelight?.getAprilTags()?.firstOrNull { it.id == 23 || it.id == 22 || it.id == 21 }?.id) {
-                23 -> Motif.PURPLE_PURPLE_GREEN
-                22 -> Motif.PURPLE_GREEN_PURPLE
-                21 -> Motif.GREEN_PURPLE_PURPLE
-                else -> null // default
-            }
-        }
-        telemetry.addData("Detected Motif", motif)
-        telemetry.update()
-        motif = motif ?: Motif.GREEN_PURPLE_PURPLE // default
+//        while (motif == null && timer.seconds() < 2.0) { // find tag or abort if too long
+//            motif = when (limelight?.getAprilTags()?.firstOrNull { it.id == 23 || it.id == 22 || it.id == 21 }?.id) {
+//                23 -> Motif.PURPLE_PURPLE_GREEN
+//                22 -> Motif.PURPLE_GREEN_PURPLE
+//                21 -> Motif.GREEN_PURPLE_PURPLE
+//                else -> null // default
+//            }
+//        }
+//        telemetry.addData("Detected Motif", motif)
+//        telemetry.update()
+//        motif = motif ?: Motif.GREEN_PURPLE_PURPLE // default
 
         out.runBlockingAndUpdate(toLaunchAction)
         out.intakeOn()
         out.runBlockingAndUpdate(out.launchAllHeld(launchDistance))
         out.runBlockingAndUpdate(firstGroup)
-        out.runBlockingAndUpdate(out.launchAllHeld(launchDistance))
-        out.runBlockingAndUpdate(secondGroup)
         out.runBlockingAndUpdate(out.endAutoAction())
 
         if (false) {
+            out.runBlockingAndUpdate(out.launchAllHeld(launchDistance))
+            out.runBlockingAndUpdate(secondGroup)
             out.runBlockingAndUpdate(out.launchAllHeld(launchDistance))
             out.runBlockingAndUpdate(thirdGroup)
             out.runBlockingAndUpdate(out.launchAllHeld(launchDistance))

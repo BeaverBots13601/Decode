@@ -63,10 +63,10 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
         direction = DcMotorSimple.Direction.REVERSE
     }
     private val leftIntakePropBar = hardwareMap.servo.get("leftIntakePropBar").apply {
-        position = 0.82 // calibrated
+        position = 0.90 // calibrated
     }
     private val rightIntakePropBar = hardwareMap.servo.get("rightIntakePropBar").apply {
-        position = 0.43 // calibrated
+        position = 0.45 // calibrated
     }
 
     // Color Sensors
@@ -597,16 +597,16 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
     fun calculateTagDelta(teleOp: Boolean = false): Double? {
         // get tags
         val depotTag = getDepotTag()
-        val motifTag = getMotifTag() // if can see, must rotate
+        //val motifTag = getMotifTag() // if can see, must rotate
 
         val delta = if (limelight == null) { // find delta
             null // Not attached; do nothing
         } else if (depotTag != null) {
             -depotTag.position.x * 20 // negative! because positive is left by default
-        } else if (motifTag != null) {
+//        } else if (motifTag != null) {
             // rotate to find the tag
-            null
-        } else (if (teleOp) null else 0.0)
+//            0.0
+        } else (if (teleOp) 0.0 else 0.0) // null is go track
 
         telemetry.addData("Delta", delta)
         telemetry.addData("Depot Tag Data", depotTag?.position)
@@ -823,6 +823,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction {
                     intakeOn()
                     boosterOn()
+                    leftIntakePropBar.position =  .83
+                    rightIntakePropBar.position = .52
                 },
                 sleepAndOverrideSpindexer(1.0, -1.0),
                 InstantAction {
@@ -834,6 +836,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction {
                     //intakeOff()
                     boosterOff()
+                    leftIntakePropBar.position = .90
+                    rightIntakePropBar.position = .45
                     flywheel.setVelocity(null)
                     artifacts.allLaunched()
                 },
@@ -846,8 +850,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction {
                     intakeOn()
                     boosterOn()
-                    leftIntakePropBar.position =  .75
-                    rightIntakePropBar.position = .50
+                    leftIntakePropBar.position =  .83
+                    rightIntakePropBar.position = .52
                 },
                 sleepAndOverrideSpindexer(2.0, -1.0),
                 InstantAction {
@@ -859,8 +863,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction {
                     //intakeOff()
                     boosterOff()
-                    leftIntakePropBar.position = .82
-                    rightIntakePropBar.position = .43
+                    leftIntakePropBar.position = .90
+                    rightIntakePropBar.position = .45
                     flywheel.setVelocity(null)
                     artifacts.allLaunched()
                 },
@@ -872,8 +876,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction {
                     intakeOn()
                     boosterOn()
-                    leftIntakePropBar.position =  .75
-                    rightIntakePropBar.position = .50
+                    leftIntakePropBar.position =  .83
+                    rightIntakePropBar.position = .52
                 },
 //                if (distance == LaunchDistance.FAR) {
                     //SleepAction(1.0)
@@ -888,8 +892,8 @@ class OuttakeV4 private constructor(hardwareMap: HardwareMap, initData: InitData
                 InstantAction {
                     //intakeOff()
                     boosterOff()
-                    leftIntakePropBar.position = .82
-                    rightIntakePropBar.position = .43
+                    leftIntakePropBar.position = .90
+                    rightIntakePropBar.position = .45
                     flywheel.setVelocity(null)
                     artifacts.allLaunched()
                 },
